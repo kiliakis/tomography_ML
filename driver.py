@@ -168,7 +168,15 @@ training_dataset = training_dataset.map(lambda x: tf.py_function(load_model_data
 
 training_dataset = training_dataset.shuffle(BUFFER_SIZE)
 training_dataset = training_dataset.batch(BATCH_SIZE)
-    
+
+validation_dataset = tf.data.Dataset.list_files(VALIDATION_PATH + '/*.pk')
+validation_dataset = validation_dataset.map(lambda x: tf.py_function(load_model_data, [x], [tf.float32, tf.float32, tf.float32, tf.string,
+                                                                                        tf.float32, tf.float32, tf.float32, tf.float32, tf.float32, tf.float32,
+                                                                                        tf.float32, tf.float32]))
+
+validation_dataset = validation_dataset.shuffle(BUFFER_SIZE)
+validation_dataset = validation_dataset.batch(BATCH_SIZE)
+
 test_dataset = tf.data.Dataset.list_files(TESTING_PATH + '/*.pk')
 test_dataset = test_dataset.map(lambda x: tf.py_function(load_model_data, [x], [tf.float32, tf.float32, tf.float32, tf.string,\
                                                                                 tf.float32, tf.float32, tf.float32, tf.float32,tf.float32, tf.float32,\

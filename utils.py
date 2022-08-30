@@ -38,8 +38,6 @@ def get_cmap(path=''):
     return cmap_white_blue_red
 
 
-cmap_white_blue_red = get_cmap()
-
 def running_mean(x, N):
 
     if np.ndim(x) == 2:
@@ -54,10 +52,14 @@ def running_mean(x, N):
 
 
 def extract_data_Fromfolder(fn, simulations_dir, IMG_OUTPUT_SIZE, zeropad, start_turn, skipturns, version=3):
+
     if version <= 2:
         pattern_string = 'phEr(?P<phEr>.+)_enEr(?P<enEr>.+)_bl(?P<bl>.+)_int(?P<int>.+)'
-    else:
+    elif version == 3:
         pattern_string = 'phEr(?P<phEr>.+)_enEr(?P<enEr>.+)_bl(?P<bl>.+)_int(?P<int>.+)_Vrf(?P<Vrf>.+)_mu(?P<mu>.+)'
+    else:
+        pattern_string = 'phEr(?P<phEr>.+)_enEr(?P<enEr>.+)_bl(?P<bl>.+)_int(?P<int>.+)_Vrf(?P<Vrf>.+)_mu(?P<mu>.+)_VrfSPS(?P<VrfSPS>.+)'
+
     paramsDict = {k: float(v) for k, v in re.match(
         pattern_string, fn).groupdict().items()}
     E_img = np.zeros((IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE))
@@ -99,11 +101,30 @@ def unnormalizeIMG(img, maxPixel=1):
 
 
 def normalizeTurn(turn_num, maxTurns=300.0):
-  return (turn_num / (maxTurns/2)) - 1
+    return (turn_num / (maxTurns/2)) - 1
 
 
 def unnormalizeTurn(turn_num, maxTurns=300.0):
     return (turn_num+1)*(maxTurns/2)
+
+
+def load_model_data_new(pk_file):
+    turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
+    T_img = np.reshape(T_img, T_img.shape+(1,))
+    PS = np.reshape(PS, PS.shape+(1,))
+    turn_num = normalizeTurn(turn_num)
+    T_img = normalizeIMG(T_img)
+    PS = normalizeIMG(PS)
+    phEr = float(params_dict['phEr'])
+    enEr = float(params_dict['enEr'])
+    bl = float(params_dict['bl'])
+    inten = float(params_dict['int'])
+    Vrf = float(params_dict['Vrf'])
+    mu = float(params_dict['mu'])
+    VrfSPS = float(params_dict['VrfSPS'])
+    T_normFactor = float(params_dict['T_normFactor'])
+    B_normFactor = float(params_dict['B_normFactor'])
+    return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, Vrf, mu, VrfSPS, T_normFactor, B_normFactor
 
 
 def load_model_data(pk_file):
@@ -121,7 +142,7 @@ def load_model_data(pk_file):
     mu = float(params_dict['mu'])
     T_normFactor = float(params_dict['T_normFactor'])
     B_normFactor = float(params_dict['B_normFactor'])
-    return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, Vrf, mu,  T_normFactor, B_normFactor
+    return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, Vrf, mu, T_normFactor, B_normFactor
 
 
 def load_model_data_old(pk_file):
@@ -147,36 +168,42 @@ def normalize_param(val, mu, sig):
 def unnormalize_param(norm_val, mu, sig):
     return norm_val*sig+mu
 
-
-def normalize_params(phErs, enErs, bls, intens, Vrf, mu,
+# TODO: Here add VrfSPS + mu and sig
+def normalize_params(phErs, enErs, bls, intens, Vrf, mu, VrfSPS,
                      phEr_mu=0, phEr_sig=50,
                      enEr_mu=0, enEr_sig=100,
                      bl_mu=1.4e-9, bl_sig=0.2e-9,
                      intens_mu=1.225e11, intens_sig=0.37e11,
                      Vrf_mu=6, Vrf_sig=2.2,
                      mu_mu=2, mu_sig=1,
+                     VrfSPS_mu=0, VrfSPS_sig=1
                      ):
     return normalize_param(phErs, phEr_mu, phEr_sig),\
         normalize_param(enErs, enEr_mu, enEr_sig),\
         normalize_param(bls, bl_mu, bl_sig),\
         normalize_param(intens, intens_mu, intens_sig),\
         normalize_param(Vrf, Vrf_mu, Vrf_sig),\
-        normalize_param(mu, mu_mu, mu_sig)
+        normalize_param(mu, mu_mu, mu_sig),\
+        normalize_param(VrfSPS, VrfSPS_mu, VrfSPS_sig)
 
-
-def unnormalize_params(phErs_norm, enErs_norm, bls_norm, intens_norm, Vrf_norm, mu_norm,
+# TODO: Here add VrfSPS + mu and sig
+def unnormalize_params(phErs_norm, enErs_norm, bls_norm, intens_norm, Vrf_norm,
+                       mu_norm, VrfSPS_norm,
                        phEr_mu=0, phEr_sig=50,
                        enEr_mu=0, enEr_sig=100,
                        bl_mu=1.4e-9, bl_sig=0.2e-9,
                        intens_mu=1.225e11, intens_sig=0.37e11,
                        Vrf_mu=6, Vrf_sig=2.2,
-                       mu_mu=2, mu_sig=1):
+                       mu_mu=2, mu_sig=1,
+                       VrfSPS_mu=0, VrfSPS_sig=1
+                       ):
     return unnormalize_param(phErs_norm, phEr_mu, phEr_sig),\
         unnormalize_param(enErs_norm, enEr_mu, enEr_sig),\
         unnormalize_param(bls_norm, bl_mu, bl_sig),\
         unnormalize_param(intens_norm, intens_mu, intens_sig),\
         unnormalize_param(Vrf_norm, Vrf_mu, Vrf_sig),\
-        unnormalize_param(mu_norm, mu_mu, mu_sig)
+        unnormalize_param(mu_norm, mu_mu, mu_sig),\
+        unnormalize_param(VrfSPS_norm, VrfSPS_mu, VrfSPS_sig)
 
 
 def assess_model(model, turn_normalized, T_image, PS_image, epoch=None):
@@ -204,6 +231,31 @@ def assess_model(model, turn_normalized, T_image, PS_image, epoch=None):
         plt.show()
 
 
+def assess_decoder(model, turn_normalized, PS_image, phEr, enEr, bl, inten, Vrf,
+                   mu, VrfSPS, epoch=None):
+
+    norm_pars = tf.expand_dims(tf.transpose(tf.convert_to_tensor(
+        normalize_params(phEr, enEr, bl, inten, Vrf, mu, VrfSPS))), axis=0)
+    predictions = model.decode(model.extend(norm_pars, turn_normalized))
+
+    for i in range(predictions.shape[0]):
+        turn = unnormalizeTurn(turn_normalized[i])
+        f, ax = plt.subplots(2, 2)
+        ax[0, 0].imshow(PS_image[i, :, :, 0], vmin=-1, vmax=1)
+        ax[0, 0].set_title('Ep {} PS @ {}'.format(epoch, turn))
+        ax[0, 1].imshow(predictions[i, :, :, 0], vmin=-1, vmax=1)
+        ax[0, 1].set_title('Ep {} PREDICTION @ {}'.format(epoch, turn))
+        ax[1, 0].plot(np.sum(PS_image[i, :, :, 0], 0), label='Target')
+        ax[1, 0].plot(np.sum(predictions[i, :, :, 0], 0), label='Prediction')
+        ax[1, 0].legend()
+        ax[1, 0].set_title('Time Projection')
+        ax[1, 1].plot(np.sum(PS_image[i, :, :, 0], 1), label='Target')
+        ax[1, 1].plot(np.sum(predictions[i, :, :, 0], 1), label='Prediction')
+        ax[1, 1].legend()
+        ax[1, 1].set_title('Energy Projection')
+        plt.show()
+
+
 def getTimeProfiles_FromData(fname, Ib):
     with open(fname, 'rb') as f:
         timeScale_for_tomo = np.load(f)
@@ -227,14 +279,14 @@ def getTimeProfiles_FromData_2(fname, Ib):
 
 
 def getTimgForModelFromDataFile(fname, Ib, T_normFactor, IMG_OUTPUT_SIZE, zeropad, start_turn, skipturns, centroid_offset=0):
-  timeScale_for_tomo, BunchProfiles = getTimeProfiles_FromData(fname, Ib)
-  BunchProfiles = BunchProfiles/T_normFactor
-  sel_turns = np.arange(start_turn, skipturns *
-                        (IMG_OUTPUT_SIZE-2*zeropad), skipturns).astype(np.int32)
-  T_img = np.pad(BunchProfiles[:, sel_turns], ((zeropad-centroid_offset, zeropad +
-                 centroid_offset), (zeropad, zeropad)), 'constant', constant_values=(0, 0))
-  T_img_ForModel = normalizeIMG(np.reshape(T_img, T_img.shape+(1,)))
-  return T_img_ForModel
+    timeScale_for_tomo, BunchProfiles = getTimeProfiles_FromData(fname, Ib)
+    BunchProfiles = BunchProfiles/T_normFactor
+    sel_turns = np.arange(start_turn, skipturns *
+                          (IMG_OUTPUT_SIZE-2*zeropad), skipturns).astype(np.int32)
+    T_img = np.pad(BunchProfiles[:, sel_turns], ((zeropad-centroid_offset, zeropad +
+                                                  centroid_offset), (zeropad, zeropad)), 'constant', constant_values=(0, 0))
+    T_img_ForModel = normalizeIMG(np.reshape(T_img, T_img.shape+(1,)))
+    return T_img_ForModel
 
 
 def fwhm(x, y, level=0.5):
@@ -260,21 +312,24 @@ def interp_f(time, bunch, level):
 
     return t1, t2
 
+
 def qgaussian_pdf(x, mu, amp, q, beta):
     y = amp*((1-beta*(1-q)*(x-mu)**2)**(1/(1-q)))
-    return  np.nan_to_num(y)
+    return np.nan_to_num(y)
+
 
 def binomial_pdf(x, mu, amp, m, tau_2):
     yy = (1-((x-mu)/tau_2)**2)
-    yy[yy<0] =0
-    y = amp*yy**(m+0.5) #+ offset 
-    return  np.nan_to_num(y)
+    yy[yy < 0] = 0
+    y = amp*yy**(m+0.5)  # + offset
+    return np.nan_to_num(y)
 
-def symmetrizeProfile(x,y):
+
+def symmetrizeProfile(x, y):
     peak_ind = np.argmax(y)
-    y_new = np.append(y[:peak_ind],y[peak_ind::-1])
-    x_new = np.append(x[:peak_ind],x[:peak_ind+1]+x[peak_ind])
-    y_sym = np.interp(x,x_new,y_new)
+    y_new = np.append(y[:peak_ind], y[peak_ind::-1])
+    x_new = np.append(x[:peak_ind], x[:peak_ind+1]+x[peak_ind])
+    y_sym = np.interp(x, x_new, y_new)
     return y_sym
 
 
