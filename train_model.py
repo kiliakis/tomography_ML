@@ -1,10 +1,12 @@
 # Train the ML model
 
+from telnetlib import EC
 import tensorflow as tf
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
+import matplotlib as mpl
+mpl.use('Agg')
 import time
 from utils import load_model_data_new, unnormalize_params, assess_decoder
 from models import extendedCED, mse_loss_encoder, mse_loss_decoder
@@ -17,22 +19,23 @@ weights_dir = '/eos/user/k/kiliakis/tomo_data/weights'
 IMG_OUTPUT_SIZE = 128
 BUFFER_SIZE = 50
 BATCH_SIZE = 32  # 8
-latent_dim = 6
+latent_dim = 7  # 6 + the new VrfSPS
 additional_latent_dim = 1
 
 # Train specific
 models_to_train = ['encoder', 'decoder']
 train_cfg = {
     'encoder': {
-        'epochs': 10,
+        'epochs': 1,
         'lr': 2e-4,
     },
     'decoder': {
-        'epochs': 10,
+        'epochs': 1,
         'lr': 2e-4,
     },
 }
-cnn_filters = [32, 64, 128, 256, 512, 1024]
+# cnn_filters = [32, 64, 128, 256, 512, 1024]
+cnn_filters = [32]
 
 if __name__ == '__main__':
     # Initialize GPU
@@ -109,7 +112,7 @@ if __name__ == '__main__':
         # Train the encoder
         optimizer = tf.keras.optimizers.Adam(train_cfg['encoder']['lr'])
         train_loss_l, valid_loss_l = [], []
-
+        best_encoder = None
         for epoch in range(train_cfg['encoder']['epochs']):
             start_time = time.time()
             l_encs = []
@@ -144,31 +147,44 @@ if __name__ == '__main__':
                                          Vrfs, mus, VrfSPSs)
                 loss(l_enc)
                 l_encs.append(l_enc.numpy())
+
+            # Record the average validation loss
             valid_loss_l.append(np.mean(np.array(l_encs)))
+
+            # Save if validation loss is minimum
+            if valid_loss_l[-1] == np.min(valid_loss_l):
+                best_encoder = eCED.encoder
+            
             elbo = loss.result()
             # display.clear_output(wait=False)
-            print('Epoch: {}, Test set ELBO: {}, time elapse for current epoch: {}'.format(
-                epoch, elbo, end_time - start_time))
+            print('Epoch: {}, Test set ELBO: {}, Valid set loss: {}, time elapse for current epoch: {}'.format(
+                epoch, elbo, valid_loss_l[-1], end_time - start_time))
             #assess_model(model, norm_turns[0:1], T_imgs[0:1], PS_imgs[0:1], epoch)
-            # TODO: Save if validation loss is less
             valid_pred_pars = eCED.encode(T_imgs[0:1])
 
             validDelPar = np.array(unnormalize_params(*list(valid_pred_pars[0].numpy()))) -\
                 np.array([phErs[0].numpy(), enErs[0].numpy(), bls[0].numpy(),
-                          intens[0].numpy(), Vrfs[0].numpy(), mus[0].numpy(), ])
-            plt.figure()
-            plt.plot(validDelPar/np.array([1, 1, 1e-11, 1e10, 0.1, 0.1]), 's')
+                          intens[0].numpy(), Vrfs[0].numpy(), mus[0].numpy(), 
+                          VrfSPSs[0].numpy()])
+            # plt.figure()
+            # # TODO: add number for VrfSPS
+            # plt.plot(validDelPar/np.array([1, 1, 1e-11, 1e10, 0.1, 0.1, 0.1]), 's')
 
         # Plot training and validation loss
         train_loss_l = np.array(train_loss_l)
         valid_loss_l = np.array(valid_loss_l)
 
+        
         plt.figure()
         plt.semilogy(train_loss_l, label='Training')
         plt.semilogy(valid_loss_l, label='Validation')
         plt.legend()
+        plt.tight_layout()
+        plt.savefig('plots/encoder_train_valid_loss.png', dpi=300)
+        plt.close()
 
-        # Save model weights
+        # Save the best model's weights
+        eCED.encoder = best_encoder
         eCED.encoder.save_weights(os.path.join(
             weights_dir, 'eCED_weights_encoder.h5'), save_format='h5')
 
@@ -177,7 +193,8 @@ if __name__ == '__main__':
         # Train the extender + decoder
         optimizer = tf.keras.optimizers.Adam(train_cfg['decoder']['lr'])
         train_loss_l, valid_loss_l = [], []
-
+        best_extender = None
+        best_decoder = None
         for epoch in range(train_cfg['decoder']['epochs']):
             start_time = time.time()
             l_imgs_training = []
@@ -215,13 +232,16 @@ if __name__ == '__main__':
                 loss(l_img)
                 l_imgs_validation.append(l_img.numpy())
 
-            # TODO: Save if validation loss is less
-
+            # Record validation loss
             valid_loss_l.append(np.mean(np.array(l_imgs_validation)))
+            # Save if validation loss is minimum
+            if valid_loss_l[-1] == np.min(valid_loss_l):
+                best_extender = eCED.extender
+                best_decoder = eCED.decoder
             elbo = loss.result()
             # display.clear_output(wait=False)
-            print('Epoch: {}, Test set ELBO: {}, time elapse for current epoch: {}'.format(
-                epoch, elbo, end_time - start_time))
+            print('Epoch: {}, Test set ELBO: {}, Valid set loss: {}, time elapse for current epoch: {}'.format(
+                epoch, elbo, valid_loss_l[-1], end_time - start_time))
             assess_decoder(eCED, norm_turns[0][0:1], PS_imgs[0:1], phErs[0],
                            enErs[0], bls[0], intens[0], Vrfs[0], mus[0],
                            VrfSPSs[0], epoch)
@@ -234,8 +254,13 @@ if __name__ == '__main__':
         plt.semilogy(train_loss_l, label='Training')
         plt.semilogy(valid_loss_l, label='Validation')
         plt.legend()
+        plt.tight_layout()
+        plt.savefig('plots/decoder_train_valid_loss.png', dpi=300)
+        plt.close()
 
-        # Save model weights
+        # Save the best model's weights
+        eCED.extender = best_extender
+        eCED.decoder = best_decoder
         eCED.extender.save_weights(os.path.join(
             weights_dir, 'eCED_weights_extender.h5'), save_format='h5')
         eCED.decoder.save_weights(os.path.join(

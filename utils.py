@@ -232,7 +232,7 @@ def assess_model(model, turn_normalized, T_image, PS_image, epoch=None):
 
 
 def assess_decoder(model, turn_normalized, PS_image, phEr, enEr, bl, inten, Vrf,
-                   mu, VrfSPS, epoch=None):
+                   mu, VrfSPS, epoch=None, figname='assess_decoder.png', savefig=False):
 
     norm_pars = tf.expand_dims(tf.transpose(tf.convert_to_tensor(
         normalize_params(phEr, enEr, bl, inten, Vrf, mu, VrfSPS))), axis=0)
@@ -254,6 +254,9 @@ def assess_decoder(model, turn_normalized, PS_image, phEr, enEr, bl, inten, Vrf,
         ax[1, 1].legend()
         ax[1, 1].set_title('Energy Projection')
         plt.show()
+        plt.tight_layout()
+        if savefig:
+            plt.savefig(figname, dpi=300)
 
 
 def getTimeProfiles_FromData(fname, Ib):

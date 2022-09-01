@@ -84,8 +84,8 @@ def mse_loss(model, turn_normalized, T_image, PS_image, phErs, enErs, bls, inten
 
 @tf.function
 def mse_loss_encoder(model, T_imgs, phErs, enErs, bls, intens, Vrfs, mus, VrfSPSs):
-    phErs, enErs, bls, intens, Vrf, mu, VrfSPSs = \
-        normalize_params(phErs, enErs, bls, intens, Vrf, mu, VrfSPSs)
+    phErs, enErs, bls, intens, Vrfs, mus, VrfSPSs = \
+        normalize_params(phErs, enErs, bls, intens, Vrfs, mus, VrfSPSs)
     latents = model.encode(T_imgs)
     return keras.metrics.mse(keras.backend.flatten(latents),
                                 keras.backend.flatten(

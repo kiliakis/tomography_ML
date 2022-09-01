@@ -4,8 +4,8 @@ import tensorflow as tf
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
-import time
+import matplotlib as mpl
+mpl.use('Agg')
 from utils import load_model_data_new, unnormalize_params, assess_decoder
 from models import extendedCED, mse_loss_encoder, mse_loss_decoder
 
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     # Evaluate the model
     expected_params, predicted_params = [], []
     for n, (normTurns, Timgs, PSimgs, fns, phErs, enErs, bls, intens, Vrfs, mus,
-            T_normFactors, B_normFactors) in test_dataset.enumerate():
+            VrfSPSs, T_normFactors, B_normFactors) in test_dataset.enumerate():
         for i in range(len(fns)):
             normTurn = normTurns[i:i+1]
             Timg = Timgs[i:i+1]
@@ -98,14 +98,15 @@ if __name__ == '__main__':
             inten = intens[i].numpy()
             Vrf = Vrfs[i].numpy()
             mu = mus[i].numpy()
+            VrfSPS = VrfSPSs[i].numpy()
             T_normFactor = T_normFactors[i].numpy()
             B_normFactor = B_normFactors[i].numpy()
             preds, parss = eCED.predictPS(Timg, normTurn)
-            pred_phEr, pred_enEr, pred_bl, pred_inten, pred_Vrf, pred_mu = \
+            pred_phEr, pred_enEr, pred_bl, pred_inten, pred_Vrf, pred_mu, pred_VrfSPS = \
                 unnormalize_params(*list(parss[0].numpy()))
-            expected_params.append([phEr, enEr, bl, inten, Vrf, mu])
+            expected_params.append([phEr, enEr, bl, inten, Vrf, mu, VrfSPS])
             predicted_params.append([pred_phEr, pred_enEr, pred_bl, pred_inten,
-                                     pred_Vrf, pred_mu])
+                                     pred_Vrf, pred_mu, VrfSPS])
     expected_params = np.array(expected_params)
     predicted_params = np.array(predicted_params)
 
@@ -129,3 +130,8 @@ if __name__ == '__main__':
     plt.figure()
     plt.hist(delParam[:, 5], range=(-0.5, 0.5))
     plt.xlabel('mu diff [a.u.]')
+    # TODO: add plot for VrfSPS
+    plt.figure()
+    plt.hist(delParam[:, 6], range=(-0.5, 0.5))
+    plt.xlabel('VrfSPS diff [MV]')
+    
