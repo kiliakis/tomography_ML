@@ -8,6 +8,17 @@ from matplotlib.colors import LinearSegmentedColormap
 import re
 
 
+def plot_loss(lines, title='', figname=None):
+    plt.figure()
+    plt.title(title)
+    for line in lines.keys():
+        plt.semilogy(lines[line], label=line)
+    plt.legend()
+    plt.tight_layout()
+    if figname:
+        plt.savefig(figname, dpi=300)
+    plt.close()
+
 def get_cmap(path=''):
 
     if path == '':
@@ -253,10 +264,12 @@ def assess_decoder(model, turn_normalized, PS_image, phEr, enEr, bl, inten, Vrf,
         ax[1, 1].plot(np.sum(predictions[i, :, :, 0], 1), label='Prediction')
         ax[1, 1].legend()
         ax[1, 1].set_title('Energy Projection')
-        plt.show()
         plt.tight_layout()
         if savefig:
             plt.savefig(figname, dpi=300)
+        else:
+            plt.show()
+        plt.close()
 
 
 def getTimeProfiles_FromData(fname, Ib):
