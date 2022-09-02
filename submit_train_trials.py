@@ -21,27 +21,27 @@ TRIALS_DIR = os.path.join(PROJECT_DIR, 'trials')
 configs = [
     {
         'train_cfg': {
-            'encoder': {'epochs': 10, 'lr': 0.001},
-            'decoder': {'epochs': 10, 'lr': 0.001},
+            'encoder': {'epochs': 20, 'lr': 0.001},
+            'decoder': {'epochs': 20, 'lr': 0.001},
         },
         'cnn_filters': [32, 64],
-        'dataset_keep_percent': 0.5,
+        'dataset_keep_percent': 0.7,
     },
     {
         'train_cfg': {
-            'encoder': {'epochs': 10, 'lr': 0.001},
-            'decoder': {'epochs': 10, 'lr': 0.001},
+            'encoder': {'epochs': 20, 'lr': 0.001},
+            'decoder': {'epochs': 20, 'lr': 0.001},
         },
         'cnn_filters': [32, 64, 128],
-        'dataset_keep_percent': 0.5,
+        'dataset_keep_percent': 0.7,
     },
     {
         'train_cfg': {
-            'encoder': {'epochs': 10, 'lr': 0.001},
-            'decoder': {'epochs': 10, 'lr': 0.001},
+            'encoder': {'epochs': 20, 'lr': 0.001},
+            'decoder': {'epochs': 20, 'lr': 0.001},
         },
         'cnn_filters': [32, 64, 128, 128],
-        'dataset_keep_percent': 0.5,
+        'dataset_keep_percent': 0.7,
     }
 ]
 
