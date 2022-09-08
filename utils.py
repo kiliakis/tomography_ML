@@ -119,6 +119,27 @@ def unnormalizeTurn(turn_num, maxTurns=300.0):
     return (turn_num+1)*(maxTurns/2)
 
 
+def load_encoder_data(pk_file):
+    turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
+    T_img = np.reshape(T_img, T_img.shape+(1,))
+    # PS = np.reshape(PS, PS.shape+(1,))
+    # turn_num = normalizeTurn(turn_num)
+    T_img = normalizeIMG(T_img)
+    # PS = normalizeIMG(PS)
+    phEr = float(params_dict['phEr'])
+    enEr = float(params_dict['enEr'])
+    bl = float(params_dict['bl'])
+    inten = float(params_dict['int'])
+    Vrf = float(params_dict['Vrf'])
+    mu = float(params_dict['mu'])
+    VrfSPS = float(params_dict['VrfSPS'])
+    phEr, enEr, bl, inten, Vrf, mu, VrfSPS  = normalize_params(phEr, enEr, bl, inten, Vrf, mu, VrfSPS)
+    # T_normFactor = float(params_dict['T_normFactor'])
+    # B_normFactor = float(params_dict['B_normFactor'])
+    # return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, Vrf, mu, VrfSPS, T_normFactor, B_normFactor
+    return (T_img, [phEr, enEr, bl, inten, Vrf, mu, VrfSPS])
+
+
 def load_model_data_new(pk_file):
     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
     T_img = np.reshape(T_img, T_img.shape+(1,))
