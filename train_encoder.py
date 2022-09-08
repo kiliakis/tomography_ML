@@ -2,11 +2,11 @@
 
 from models import extendedCED, mse_loss_encoder, mse_loss_decoder
 from utils import load_model_data_new, unnormalize_params, assess_decoder
-from utils import plot_loss
-import time
+from utils import plot_loss, normalize_params
 import glob
-from telnetlib import EC
 import tensorflow as tf
+from tensorflow import keras
+import time
 import yaml
 import os
 import numpy as np
@@ -28,7 +28,7 @@ timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
 IMG_OUTPUT_SIZE = 128
-BUFFER_SIZE = 50
+BUFFER_SIZE = 1000      # this number should be ideally as large as the data
 BATCH_SIZE = 32  # 8
 latent_dim = 7  # 6 + the new VrfSPS
 additional_latent_dim = 1
@@ -67,7 +67,6 @@ if __name__ == '__main__':
     weights_dir = os.path.join(trial_dir, 'weights')
     plots_dir = os.path.join(trial_dir, 'plots')
 
-
     # Initialize GPU
     gpus = tf.config.experimental.list_physical_devices('GPU')
     device_to_use = 0
@@ -91,12 +90,10 @@ if __name__ == '__main__':
     ML_dir = os.path.join(data_dir, 'ML_data')
     TRAINING_PATH = os.path.join(ML_dir, 'TRAINING')
     VALIDATION_PATH = os.path.join(ML_dir, 'VALIDATION')
-    # TESTING_PATH = os.path.join(ML_dir, 'TESTING')
     assert os.path.exists(TRAINING_PATH)
     assert os.path.exists(VALIDATION_PATH)
-    # assert os.path.exists(TESTING_PATH)
-    
-    # create the directory to store the results 
+
+    # create the directory to store the results
     os.makedirs(trial_dir, exist_ok=True)
     os.makedirs(weights_dir, exist_ok=False)
     os.makedirs(plots_dir, exist_ok=False)
@@ -106,27 +103,33 @@ if __name__ == '__main__':
     files = files[:int(len(files) * dataset_keep_percent)]
     # train_dataset = tf.data.Dataset.list_files(TRAINING_PATH + '/*.pk')
     train_dataset = tf.data.Dataset.from_tensor_slices(files)
+    train_dataset = train_dataset.shuffle(BUFFER_SIZE)
+    # train_dataset = train_dataset.batch(BATCH_SIZE)
     train_dataset = train_dataset.map(lambda x: tf.py_function(load_model_data_new, [x],
                                                                [tf.float32, tf.float32, tf.float32, tf.string,
                                                                 tf.float32, tf.float32, tf.float32, tf.float32,
                                                                 tf.float32, tf.float32, tf.float32, tf.float32,
                                                                 tf.float32]))
 
-    train_dataset = train_dataset.shuffle(BUFFER_SIZE)
-    train_dataset = train_dataset.batch(BATCH_SIZE)
+    # split the data in a tuple, with the input features, and then the output
+    train_dataset = train_dataset.map(
+        lambda *x: (x[1], tf.convert_to_tensor(normalize_params(*x[4:11]))))
 
     files = glob.glob(VALIDATION_PATH + '/*.pk')
     files = files[:int(len(files) * dataset_keep_percent)]
     # valid_dataset = tf.data.Dataset.list_files(VALIDATION_PATH + '/*.pk')
     valid_dataset = tf.data.Dataset.from_tensor_slices(files)
+    valid_dataset = valid_dataset.shuffle(BUFFER_SIZE)
+    # valid_dataset = valid_dataset.batch(BATCH_SIZE)
+
     valid_dataset = valid_dataset.map(lambda x: tf.py_function(load_model_data_new, [x],
                                                                [tf.float32, tf.float32, tf.float32, tf.string,
                                                                 tf.float32, tf.float32, tf.float32, tf.float32,
                                                                 tf.float32, tf.float32, tf.float32, tf.float32,
                                                                 tf.float32]))
-
-    valid_dataset = valid_dataset.shuffle(BUFFER_SIZE)
-    valid_dataset = valid_dataset.batch(BATCH_SIZE)
+    # split the data in a tuple, with the input features, and then the output
+    valid_dataset = valid_dataset.map(
+        lambda *x: (x[1], tf.convert_to_tensor(normalize_params(*x[4:11]))))
 
     # Model instantiation
     input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
@@ -135,90 +138,42 @@ if __name__ == '__main__':
                        filters=cnn_filters)
 
     print(eCED.encoder.summary())
-    # print(eCED.extender.summary())
-    # print(eCED.decoder.summary())
-    config_dict = {}
 
-    # if 'encoder' in models_to_train:
- 
     # Train the encoder
     print('\n---- Training the encoder ----\n')
-    optimizer = tf.keras.optimizers.Adam(train_cfg['encoder']['lr'])
-    train_loss_l, valid_loss_l = [], []
-    best_encoder = None
-    total_time = 0
-    for epoch in range(train_cfg['encoder']['epochs']):
-        start_time = time.time()
-        l_encs = []
-        # Iterate over each batch
-        for n, (norm_turns, T_imgs, PS_imgs, fns, phErs, enErs, bls, intens,
-                Vrfs, mus, VrfSPSs, _, _) in train_dataset.enumerate():
-            print('.', end='')
-            if (n+1) % 100 == 0:
-                print()
 
-            # Calculate loss and gradients
-            with tf.GradientTape() as tape:
-                l_enc = mse_loss_encoder(eCED, T_imgs, phErs, enErs, bls,
-                                            intens, Vrfs, mus, VrfSPSs)
-                l_encs.append(l_enc.numpy())
-                gradients = tape.gradient(l_enc,
-                                            eCED.encoder.trainable_variables)
-            # Apply the gradients
-            optimizer.apply_gradients(
-                zip(gradients, eCED.encoder.trainable_variables))
-        # Record the average train loss for the entire epoch
-        train_loss_l.append(np.mean(np.array(l_encs)))
-        print()
-        end_time = time.time()
-        total_time += end_time - start_time
+    optimizer = keras.optimizers.Adam(train_cfg['encoder']['lr'])
+    eCED.encoder.compile(optimizer=optimizer, loss='mse')
 
-        # Repeat for validation data, do not update the gradients
-        loss = tf.keras.metrics.Mean()
-        l_encs = []
-        for n, (norm_turns, T_imgs, PS_imgs, fns,  phErs, enErs, bls, intens,
-                Vrfs, mus, VrfSPSs, _, _) in valid_dataset.enumerate():
-            l_enc = mse_loss_encoder(eCED, T_imgs, phErs, enErs, bls, intens,
-                                        Vrfs, mus, VrfSPSs)
-            loss(l_enc)
-            l_encs.append(l_enc.numpy())
+    # callbacks, save the best model, and early stop if no improvement in val_loss
+    stop_early = keras.callbacks.EarlyStopping(monitor='val_loss',
+                                               patience=5, restore_best_weights=True)
+    save_best = keras.callbacks.ModelCheckpoint(filepath=os.path.join(weights_dir, 'encoder'),
+                                                monitor='val_loss', save_best_only=True)
 
-        # Record the average validation loss
-        valid_loss_l.append(np.mean(np.array(l_encs)))
-
-        # Save if validation loss is minimum
-        if valid_loss_l[-1] == np.min(valid_loss_l):
-            best_encoder = eCED.encoder
-
-        elbo = loss.result()
-        # display.clear_output(wait=False)
-        print('Epoch: {}, Train set loss: {:.4f}, Valid set loss: {:.4f}, time elapse: {:.4f}'.format(
-            epoch, train_loss_l[-1], valid_loss_l[-1], end_time - start_time))
-        # # TODO: assess encoder visually
-        #assess_model(model, norm_turns[0:1], T_imgs[0:1], PS_imgs[0:1], epoch)
-        # valid_pred_pars = eCED.encode(T_imgs[0:1])
-
-        # validDelPar = np.array(unnormalize_params(*list(valid_pred_pars[0].numpy()))) -\
-        #     np.array([phErs[0].numpy(), enErs[0].numpy(), bls[0].numpy(),
-        #               intens[0].numpy(), Vrfs[0].numpy(), mus[0].numpy(),
-        #               VrfSPSs[0].numpy()])
-        # plt.figure()
-        # plt.plot(validDelPar/np.array([1, 1, 1e-11, 1e10, 0.1, 0.1, 0.1]), 's')
-
+    start_time = time.time()
+    history = eCED.encoder.fit(
+        train_dataset, epochs=train_cfg['encoder']['epochs'],
+        validation_data=valid_dataset, batch_size=BATCH_SIZE,
+        callbacks=[stop_early, save_best])
+    
+    total_time = time.time() - start_time
+    
     # Plot training and validation loss
-    train_loss_l = np.array(train_loss_l)
-    valid_loss_l = np.array(valid_loss_l)
+    train_loss_l = np.array(history.history['loss'])
+    valid_loss_l = np.array(history.history['val_loss'])
 
     plot_loss({'Training': train_loss_l, 'Validation': valid_loss_l},
-                title='Encoder Train/Validation Loss',
-                figname=os.path.join(plots_dir, 'encoder_train_valid_loss.png'))
+              title='Encoder Train/Validation Loss',
+              figname=os.path.join(plots_dir, 'encoder_train_valid_loss.png'))
 
     # Save the best model's weights
-    eCED.encoder = best_encoder
-    eCED.encoder.save_weights(os.path.join(
-        weights_dir, 'eCED_weights_encoder.h5'), save_format='h5')
+    # eCED.encoder = best_encoder
+    # eCED.encoder.save_weights(os.path.join(
+    #     weights_dir, 'eCED_weights_encoder.h5'), save_format='h5')
 
     # save file with experiment configuration
+    config_dict = {}
     config_dict['encoder'] = {
         'epochs': train_cfg['encoder']['epochs'],
         'lr': train_cfg['encoder']['lr'],
@@ -229,6 +184,72 @@ if __name__ == '__main__':
         'total_train_time': total_time,
         'used_gpus': len(gpus)
     }
+
+    # save config_dict
+    with open(os.path.join(trial_dir, 'encoder-summary.yml'), 'w') as configfile:
+        yaml.dump(config_dict, configfile, default_flow_style=False)
+
+
+    # train_loss_l, valid_loss_l = [], []
+    # best_encoder = None
+    # total_time = 0
+    # for epoch in range(train_cfg['encoder']['epochs']):
+    #     start_time = time.time()
+    #     l_encs = []
+    #     # Iterate over each batch
+    #     for n, (norm_turns, T_imgs, PS_imgs, fns, phErs, enErs, bls, intens,
+    #             Vrfs, mus, VrfSPSs, _, _) in train_dataset.enumerate():
+    #         print('.', end='')
+    #         if (n+1) % 100 == 0:
+    #             print()
+
+    #         # Calculate loss and gradients
+    #         with tf.GradientTape() as tape:
+    #             l_enc = mse_loss_encoder(eCED, T_imgs, phErs, enErs, bls,
+    #                                         intens, Vrfs, mus, VrfSPSs)
+    #             l_encs.append(l_enc.numpy())
+    #             gradients = tape.gradient(l_enc,
+    #                                         eCED.encoder.trainable_variables)
+    #         # Apply the gradients
+    #         optimizer.apply_gradients(
+    #             zip(gradients, eCED.encoder.trainable_variables))
+    #     # Record the average train loss for the entire epoch
+    #     train_loss_l.append(np.mean(np.array(l_encs)))
+    #     print()
+    #     end_time = time.time()
+    #     total_time += end_time - start_time
+
+    #     # Repeat for validation data, do not update the gradients
+    #     loss = tf.keras.metrics.Mean()
+    #     l_encs = []
+    #     for n, (norm_turns, T_imgs, PS_imgs, fns,  phErs, enErs, bls, intens,
+    #             Vrfs, mus, VrfSPSs, _, _) in valid_dataset.enumerate():
+    #         l_enc = mse_loss_encoder(eCED, T_imgs, phErs, enErs, bls, intens,
+    #                                     Vrfs, mus, VrfSPSs)
+    #         loss(l_enc)
+    #         l_encs.append(l_enc.numpy())
+
+    #     # Record the average validation loss
+    #     valid_loss_l.append(np.mean(np.array(l_encs)))
+
+    #     # Save if validation loss is minimum
+    #     if valid_loss_l[-1] == np.min(valid_loss_l):
+    #         best_encoder = eCED.encoder
+
+    #     elbo = loss.result()
+    #     # display.clear_output(wait=False)
+    #     print('Epoch: {}, Train set loss: {:.4f}, Valid set loss: {:.4f}, time elapse: {:.4f}'.format(
+    #         epoch, train_loss_l[-1], valid_loss_l[-1], end_time - start_time))
+    #     # # TODO: assess encoder visually
+    #     #assess_model(model, norm_turns[0:1], T_imgs[0:1], PS_imgs[0:1], epoch)
+    #     # valid_pred_pars = eCED.encode(T_imgs[0:1])
+
+    #     # validDelPar = np.array(unnormalize_params(*list(valid_pred_pars[0].numpy()))) -\
+    #     #     np.array([phErs[0].numpy(), enErs[0].numpy(), bls[0].numpy(),
+    #     #               intens[0].numpy(), Vrfs[0].numpy(), mus[0].numpy(),
+    #     #               VrfSPSs[0].numpy()])
+    #     # plt.figure()
+    #     # plt.plot(validDelPar/np.array([1, 1, 1e-11, 1e10, 0.1, 0.1, 0.1]), 's')
 
     # if 'decoder' in models_to_train:
     #     print('\n---- Training the decoder ----\n')
@@ -321,7 +342,3 @@ if __name__ == '__main__':
     #         'used_gpus': len(gpus)
     #     }
 
-    # save config_dict 
-    if len(config_dict):
-        with open(os.path.join(trial_dir, 'summary.yml'), 'w') as configfile:
-            yaml.dump(config_dict, configfile, default_flow_style=False)

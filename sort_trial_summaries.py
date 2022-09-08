@@ -21,17 +21,18 @@ if __name__ == '__main__':
               'epochs', 'dataset', 'lr', 'gpus', 'train_time', 'date']
     rows = []
     for dirs, subdirs, files in os.walk(args.indir):
-        if 'summary.yml' not in files:
-            continue
-        with open(os.path.join(dirs, 'summary.yml')) as f:
-            summary = yaml.load(f, Loader=yaml.FullLoader)
-        for k, v in summary.items():
-            row = [k, f'{v["min_valid_loss"]:.4f}', f'{v["min_train_loss"]:.4f}',
-                   '-'.join(map(str, v['cnn_filters'])), str(v['epochs']),
-                   str(v['dataset_percent']), str(v['lr']),
-                   str(v['used_gpus']), f'{v["total_train_time"]:.1f}',
-                   os.path.basename(dirs)[:10]]
-            rows.append(row)
+        for file in files:
+            if 'summary.yml' not in file:
+                continue
+            with open(os.path.join(dirs, file)) as f:
+                summary = yaml.load(f, Loader=yaml.FullLoader)
+            for k, v in summary.items():
+                row = [k, f'{v["min_valid_loss"]:.4f}', f'{v["min_train_loss"]:.4f}',
+                    '-'.join(map(str, v['cnn_filters'])), str(v['epochs']),
+                    str(v['dataset_percent']), str(v['lr']),
+                    str(v['used_gpus']), f'{v["total_train_time"]:.1f}',
+                    os.path.basename(dirs)[:10]]
+                rows.append(row)
     
     rows = sorted(rows, key=lambda a: (a[0], a[1]))
 
