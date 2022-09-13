@@ -12,7 +12,9 @@ def plot_loss(lines, title='', figname=None):
     plt.figure()
     plt.title(title)
     for line in lines.keys():
-        plt.semilogy(lines[line], label=line)
+        plt.semilogy(lines[line], marker='x', label=line)
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
     plt.legend()
     plt.tight_layout()
     if figname:
@@ -140,6 +142,27 @@ def load_encoder_data(pk_file):
     return (T_img, [phEr, enEr, bl, inten, Vrf, mu, VrfSPS])
 
 
+def load_decoder_data(pk_file):
+    turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
+    # T_img = np.reshape(T_img, T_img.shape+(1,))
+    PS = np.reshape(PS, PS.shape+(1,))
+    turn_num = normalizeTurn(turn_num)
+    # T_img = normalizeIMG(T_img)
+    PS = normalizeIMG(PS)
+    phEr = float(params_dict['phEr'])
+    enEr = float(params_dict['enEr'])
+    bl = float(params_dict['bl'])
+    inten = float(params_dict['int'])
+    Vrf = float(params_dict['Vrf'])
+    mu = float(params_dict['mu'])
+    VrfSPS = float(params_dict['VrfSPS'])
+    phEr, enEr, bl, inten, Vrf, mu, VrfSPS  = normalize_params(phEr, enEr, bl, inten, Vrf, mu, VrfSPS)
+
+    # T_normFactor = float(params_dict['T_normFactor'])
+    # B_normFactor = float(params_dict['B_normFactor'])
+    return ([turn_num, phEr, enEr, bl, inten, Vrf, mu, VrfSPS], PS)
+
+
 def load_model_data_new(pk_file):
     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
     T_img = np.reshape(T_img, T_img.shape+(1,))
@@ -192,6 +215,27 @@ def load_model_data_old(pk_file):
     B_normFactor = float(params_dict['B_normFactor'])
     return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, T_normFactor, B_normFactor
 
+def encoder_files_to_tensors(files):
+    feature_lst = []
+    output_lst = []
+    for file in files:
+        features, output = load_encoder_data(file)
+        feature_lst.append(features)
+        output_lst.append(output)
+    x_train = tf.convert_to_tensor(feature_lst)
+    y_train = tf.convert_to_tensor(output_lst)
+    return x_train, y_train
+
+def decoder_files_to_tensors(files):
+    feature_lst = []
+    output_lst = []
+    for file in files:
+        features, output = load_decoder_data(file)
+        feature_lst.append(features)
+        output_lst.append(output)
+    x_train = tf.convert_to_tensor(feature_lst)
+    y_train = tf.convert_to_tensor(output_lst)
+    return x_train, y_train
 
 def normalize_param(val, mu, sig):
     return (val-mu)/sig
