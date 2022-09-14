@@ -216,25 +216,25 @@ def load_model_data_old(pk_file):
     return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, T_normFactor, B_normFactor
 
 def encoder_files_to_tensors(files):
-    feature_lst = []
-    output_lst = []
-    for file in files:
+    feature_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
+    output_arr = np.zeros((len(files), 7), dtype=np.float32)
+    for i, file in enumerate(files):
         features, output = load_encoder_data(file)
-        feature_lst.append(features)
-        output_lst.append(output)
-    x_train = tf.convert_to_tensor(feature_lst)
-    y_train = tf.convert_to_tensor(output_lst)
+        feature_arr[i] = features
+        output_arr[i] = output
+    x_train = tf.convert_to_tensor(feature_arr)
+    y_train = tf.convert_to_tensor(output_arr)
     return x_train, y_train
 
 def decoder_files_to_tensors(files):
-    feature_lst = []
-    output_lst = []
-    for file in files:
+    feature_arr = np.zeros((len(files), 8), dtype=np.float32)
+    output_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
+    for i, file in enumerate(files):
         features, output = load_decoder_data(file)
-        feature_lst.append(features)
-        output_lst.append(output)
-    x_train = tf.convert_to_tensor(feature_lst)
-    y_train = tf.convert_to_tensor(output_lst)
+        feature_arr[i] = features
+        output_arr[i] = output
+    x_train = tf.convert_to_tensor(feature_arr)
+    y_train = tf.convert_to_tensor(output_arr)
     return x_train, y_train
 
 def normalize_param(val, mu, sig):
@@ -252,7 +252,7 @@ def normalize_params(phErs, enErs, bls, intens, Vrf, mu, VrfSPS,
                      intens_mu=1.225e11, intens_sig=0.37e11,
                      Vrf_mu=6, Vrf_sig=2.2,
                      mu_mu=2, mu_sig=1,
-                     VrfSPS_mu=0, VrfSPS_sig=1
+                     VrfSPS_mu=6, VrfSPS_sig=2.2
                      ):
     return normalize_param(phErs, phEr_mu, phEr_sig),\
         normalize_param(enErs, enEr_mu, enEr_sig),\

@@ -42,10 +42,6 @@ class extendedCED(keras.Model):
         self.decoder.add(keras.layers.Conv2DTranspose(
             filters=1, kernel_size=3, strides=1, padding='same'))
 
-        # self.encoder.summary()
-        # self.extender.summary()
-        # self.decoder.summary()
-
     @tf.function
     def encode(self, x):
         return self.encoder(x)
