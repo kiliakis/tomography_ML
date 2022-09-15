@@ -1,3 +1,4 @@
+from ast import Try
 import numpy as np
 import pickle as pk
 import h5py as hp
@@ -101,7 +102,10 @@ def extract_data_Fromfolder(fn, simulations_dir, IMG_OUTPUT_SIZE, zeropad, start
 
 
 def read_pk(fname):
-    data = pk.loads(tf.io.decode_raw(tf.io.read_file(fname), tf.uint8))
+    try:
+        data = pk.loads(tf.io.decode_raw(tf.io.read_file(fname), tf.uint8))
+    except pk.UnpicklingError as e:
+        print(f'Skipping file {fname}, ', e)
     return data['turn'], data['T_img'], data['PS'], data['fn'], data['params']
 
 
@@ -245,15 +249,27 @@ def unnormalize_param(norm_val, mu, sig):
     return norm_val*sig+mu
 
 # TODO: Here add VrfSPS + mu and sig
+# These values originate from data
 def normalize_params(phErs, enErs, bls, intens, Vrf, mu, VrfSPS,
-                     phEr_mu=0, phEr_sig=50,
-                     enEr_mu=0, enEr_sig=100,
-                     bl_mu=1.4e-9, bl_sig=0.2e-9,
-                     intens_mu=1.225e11, intens_sig=0.37e11,
-                     Vrf_mu=6, Vrf_sig=2.2,
-                     mu_mu=2, mu_sig=1,
-                     VrfSPS_mu=6, VrfSPS_sig=2.2
+                     phEr_mu=0.45, phEr_sig=29.14,
+                     enEr_mu=-0.11, enEr_sig=58.23,
+                     bl_mu=1.48e-9, bl_sig=0.167e-9,
+                     intens_mu=1.565e11, intens_sig=0.843e11,
+                     Vrf_mu=6.06, Vrf_sig=1.79,
+                     mu_mu=2.89, mu_sig=1.11,
+                     VrfSPS_mu=8.51, VrfSPS_sig=2.02
                      ):
+    '''
+    def normalize_params(phErs, enErs, bls, intens, Vrf, mu, VrfSPS,
+                        phEr_mu=0, phEr_sig=50,
+                        enEr_mu=0, enEr_sig=100,
+                        bl_mu=1.4e-9, bl_sig=0.2e-9,
+                        intens_mu=1.225e11, intens_sig=0.37e11,
+                        Vrf_mu=6, Vrf_sig=2.2,
+                        mu_mu=2, mu_sig=1,
+                        VrfSPS_mu=6, VrfSPS_sig=2.2
+                        ):
+    '''
     return normalize_param(phErs, phEr_mu, phEr_sig),\
         normalize_param(enErs, enEr_mu, enEr_sig),\
         normalize_param(bls, bl_mu, bl_sig),\
@@ -263,16 +279,30 @@ def normalize_params(phErs, enErs, bls, intens, Vrf, mu, VrfSPS,
         normalize_param(VrfSPS, VrfSPS_mu, VrfSPS_sig)
 
 # TODO: Here add VrfSPS + mu and sig
+
+
 def unnormalize_params(phErs_norm, enErs_norm, bls_norm, intens_norm, Vrf_norm,
                        mu_norm, VrfSPS_norm,
-                       phEr_mu=0, phEr_sig=50,
-                       enEr_mu=0, enEr_sig=100,
-                       bl_mu=1.4e-9, bl_sig=0.2e-9,
-                       intens_mu=1.225e11, intens_sig=0.37e11,
-                       Vrf_mu=6, Vrf_sig=2.2,
-                       mu_mu=2, mu_sig=1,
-                       VrfSPS_mu=0, VrfSPS_sig=1
+                       phEr_mu=0.45, phEr_sig=29.14,
+                       enEr_mu=-0.11, enEr_sig=58.23,
+                       bl_mu=1.48e-9, bl_sig=0.167e-9,
+                       intens_mu=1.565e11, intens_sig=0.843e11,
+                       Vrf_mu=6.06, Vrf_sig=1.79,
+                       mu_mu=2.89, mu_sig=1.11,
+                       VrfSPS_mu=8.51, VrfSPS_sig=2.02
                        ):
+    '''
+    def unnormalize_params(phErs_norm, enErs_norm, bls_norm, intens_norm, Vrf_norm,
+                        mu_norm, VrfSPS_norm,
+                        phEr_mu=0, phEr_sig=50,
+                        enEr_mu=0, enEr_sig=100,
+                        bl_mu=1.4e-9, bl_sig=0.2e-9,
+                        intens_mu=1.225e11, intens_sig=0.37e11,
+                        Vrf_mu=6, Vrf_sig=2.2,
+                        mu_mu=2, mu_sig=1,
+                        VrfSPS_mu=6, VrfSPS_sig=2.2
+                        ):
+    '''
     return unnormalize_param(phErs_norm, phEr_mu, phEr_sig),\
         unnormalize_param(enErs_norm, enEr_mu, enEr_sig),\
         unnormalize_param(bls_norm, bl_mu, bl_sig),\

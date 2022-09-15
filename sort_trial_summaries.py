@@ -17,8 +17,8 @@ parser.add_argument('-o', '--outfile', type=str, default='trials-sorted.csv',
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    header = ['model', 'valid_loss', 'train_loss', 'cnn_filters',
-              'epochs', 'dataset', 'lr', 'gpus', 'train_time', 'date']
+    header = ['model', 'vld_ls', 'trn_ls', 'filters',
+              'epoch', 'data', 'lr', 'gpu', 'time', 'date']
     rows = []
     for dirs, subdirs, files in os.walk(args.indir):
         for file in files:
@@ -27,11 +27,13 @@ if __name__ == '__main__':
             with open(os.path.join(dirs, file)) as f:
                 summary = yaml.load(f, Loader=yaml.FullLoader)
             for k, v in summary.items():
-                row = [k, f'{v["min_valid_loss"]:.4f}', f'{v["min_train_loss"]:.4f}',
+                date = os.path.basename(dirs)[2:]
+                date = date.replace('-', '').replace('_', '', 2)
+                row = [k[:3], f'{v["min_valid_loss"]:.4f}', f'{v["min_train_loss"]:.4f}',
                     '-'.join(map(str, v['cnn_filters'])), str(v['epochs']),
                     str(v['dataset_percent']), str(v['lr']),
                     str(v['used_gpus']), f'{v["total_train_time"]:.1f}',
-                    os.path.basename(dirs)[:10]]
+                    date]
                 rows.append(row)
     
     rows = sorted(rows, key=lambda a: (a[0], a[1]))
@@ -46,9 +48,9 @@ if __name__ == '__main__':
     decode_t.border = False
 
     for r in rows:
-        if r[0] == 'encoder':
+        if 'enc' in r[0]:
             encode_t.add_row(r)
-        if r[0] == 'decoder':
+        if 'dec' in r[0]:
             decode_t.add_row(r)
     print(encode_t)
     print()

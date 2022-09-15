@@ -7,7 +7,9 @@ import argparse
 
 submission_system = 'condor'
 USERNAME = 'kiliakis'
-RUNTIME = 4          # in hours
+RUNTIME = 1          # in hours
+USE_GPU = 0          # request for a gpu node
+CPU_CORES = 4        # number of CPU cores
 if submission_system == 'condor':
     WORK = f"/afs/cern.ch/work/{USERNAME[0]}/{USERNAME}"
     PROJECT_DIR = f"{WORK}/git/tomography_ML"
@@ -19,30 +21,34 @@ else:
 TRIALS_DIR = os.path.join(PROJECT_DIR, 'trials')
 
 configs = [
+    # {
+    #     'train_cfg': {
+    #         'encoder': {'epochs': 30, 'lr': 0.001},
+    #     },
+    #     'cnn_filters': [32, 64, 128, 256, 256],
+    #     'dataset_keep_percent': 1,
+    # },
     {
         'train_cfg': {
-            'encoder': {'epochs': 20, 'lr': 0.001},
-            'decoder': {'epochs': 20, 'lr': 0.001},
+            'encoder': {'epochs': 30, 'lr': 0.002},
         },
-        'cnn_filters': [32, 64],
-        'dataset_keep_percent': 0.7,
+        'cnn_filters': [32, 64, 128, 256, 256],
+        'dataset_keep_percent': 1,
     },
     {
         'train_cfg': {
-            'encoder': {'epochs': 20, 'lr': 0.001},
-            'decoder': {'epochs': 20, 'lr': 0.001},
+            'decoder': {'epochs': 30, 'lr': 0.001},
         },
-        'cnn_filters': [32, 64, 128],
-        'dataset_keep_percent': 0.7,
+        'cnn_filters': [32, 64, 128, 256],
+        'dataset_keep_percent': 1,
     },
-    {
-        'train_cfg': {
-            'encoder': {'epochs': 20, 'lr': 0.001},
-            'decoder': {'epochs': 20, 'lr': 0.001},
-        },
-        'cnn_filters': [32, 64, 128, 128],
-        'dataset_keep_percent': 0.7,
-    }
+    # {
+    #     'train_cfg': {
+    #         'decoder': {'epochs': 30, 'lr': 0.001},
+    #     },
+    #     'cnn_filters': [32, 64, 128, 256, 256],
+    #     'dataset_keep_percent': 1,
+    # },
 ]
 
 parser = argparse.ArgumentParser(description='Submit multiple train trials in htcondor',
@@ -75,7 +81,8 @@ if __name__ == '__main__':
             f.write(f"log                    = {trial_dir}/log.txt\n")
             f.write("getenv                  = True \n")
             f.write("should_transfer_files   = IF_needed \n")
-            f.write("request_gpus            = 1 \n")
+            f.write(f"request_gpus            = {USE_GPU} \n")
+            f.write(f"request_cpus            = {CPU_CORES} \n")
             # f.write("requirements            = regexp(\"V100\", TARGET.CUDADeviceName) \n")
             # f.write("Arch                    = \"INTEL\" \n ")
             f.write(f"+MaxRuntime            = {int(3600 * RUNTIME)} \n")
@@ -92,12 +99,18 @@ if __name__ == '__main__':
             f.write("lscpu \n")
             f.write(f"cd {PROJECT_DIR}\n")
             f.write(f"# Run the python script\n")
-            f.write(
-                f"{PYTHON} train_model.py -c {config_file_name}\n")
+            if 'encoder' in config['train_cfg']:
+                f.write(
+                    f"{PYTHON} train_encoder.py -c {config_file_name}\n")
+            if 'decoder' in config['train_cfg']:
+                f.write(
+                    f"{PYTHON} train_decoder.py -c {config_file_name}\n")
 
         # Print the shell script content on the screen
         # subprocess.run(["cat", "execute.sh"])
 
+        # sleep to avoid directory collisions
+        sleep(1.5)
         if args.dry_run:
             continue
 
@@ -105,6 +118,5 @@ if __name__ == '__main__':
         print("Submitting job")
         if submission_system == 'condor':
             subprocess.run(["condor_submit", "submit.sub"])
-            sleep(1)
 
     print('Done!')

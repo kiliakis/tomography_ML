@@ -28,7 +28,7 @@ timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
 IMG_OUTPUT_SIZE = 128
-BUFFER_SIZE = 1000      # this number should be ideally as large as the data
+BUFFER_SIZE = 6667      # this number should be ideally as large as the data
 BATCH_SIZE = 32  # 8
 latent_dim = 7  # 6 + the new VrfSPS
 additional_latent_dim = 1
@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
     # callbacks, save the best model, and early stop if no improvement in val_loss
     stop_early = keras.callbacks.EarlyStopping(monitor='val_loss',
-                                               patience=5, restore_best_weights=True)
+                                               patience=10, restore_best_weights=True)
     save_best = keras.callbacks.ModelCheckpoint(filepath=os.path.join(weights_dir, 'encoder'),
                                                 monitor='val_loss', save_best_only=True)
 
