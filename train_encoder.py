@@ -1,6 +1,6 @@
 # Train the ML model
 
-from models import extendedCED
+from models import Encoder
 # from utils import load_model_data_new, normalize_params
 from utils import plot_loss, encoder_files_to_tensors
 import time
@@ -31,24 +31,35 @@ IMG_OUTPUT_SIZE = 128
 BUFFER_SIZE = 6667      # this number should be ideally as large as the data
 BATCH_SIZE = 32  # 8
 latent_dim = 7  # 6 + the new VrfSPS
-additional_latent_dim = 1
+# additional_latent_dim = 1
 
 # Train specific
 train_cfg = {
-    'encoder': {
-        'epochs': 2,
-        'lr': 2e-4,
-    },
+    'epochs': 5,
+    'dense_layers': [64, latent_dim],
+    'filters': [32, 32],
+    'cropping': [8, 0],
+    'kernel_size': 3,
+    'strides': [2, 2],
+    'activation': 'relu',
+    'pooling': None,
+    'pooling_size': [0, 0],
+    'pooling_strides': [1, 1],
+    'pooling_padding': 'valid',
+    'dropout': 0.2,
+    'loss': 'mse',
+    'lr': 1e-3,
+    'dataset%': 0.1
 }
 
 # Keep only a small percentage of the entire dataset
 # for faster testing.
-dataset_keep_percent = 0.1
+# dataset_keep_percent = 0.1
 # cnn_filters = [32, 64, 128, 256, 512, 1024]
-cnn_filters = [32]
+# cnn_filters = [32]
 
 if __name__ == '__main__':
-
+    
     args = parser.parse_args()
     # If input config file is provided, read input from config file
     input_config_file = args.config
@@ -56,15 +67,17 @@ if __name__ == '__main__':
         with open(input_config_file) as f:
             input_config = yaml.load(f, Loader=yaml.FullLoader)
         # print(input_config)
-        train_cfg = input_config['train_cfg']
-        cnn_filters = input_config['cnn_filters']
-        dataset_keep_percent = input_config['dataset_keep_percent']
+        train_cfg = input_config['encoder']
+        # cnn_filters = input_config['cnn_filters']
+        # dataset_keep_percent = input_config['dataset_keep_percent']
         timestamp = input_config['timestamp']
 
     # Initialize directories
     trial_dir = os.path.join('./trials/', timestamp)
     weights_dir = os.path.join(trial_dir, 'weights')
     plots_dir = os.path.join(trial_dir, 'plots')
+
+    print('\n---- Using directory: ', trial_dir, ' ----\n')
 
     # Initialize GPU
     gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -100,7 +113,7 @@ if __name__ == '__main__':
     # Create the datasets
     # First the training data
     files = glob.glob(TRAINING_PATH + '/*.pk')
-    files = files[:int(len(files) * dataset_keep_percent)]
+    files = files[:int(len(files) * train_cfg['dataset%'])]
 
     # Shuffle them
     np.random.shuffle(files)
@@ -109,7 +122,7 @@ if __name__ == '__main__':
 
     # Then the validation data
     files = glob.glob(VALIDATION_PATH + '/*.pk')
-    files = files[:int(len(files) * dataset_keep_percent)]
+    files = files[:int(len(files) * train_cfg['dataset%'])]
 
     # Shuffle them
     np.random.shuffle(files)
@@ -119,32 +132,31 @@ if __name__ == '__main__':
     # Model instantiation
     input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
 
-    eCED = extendedCED(latent_dim, additional_latent_dim, input_shape,
-                       filters=cnn_filters)
+    encoder = Encoder(input_shape=input_shape, **train_cfg)
 
-    print(eCED.encoder.summary())
+    print(encoder.model.summary())
 
     # Train the encoder
     print('\n---- Training the encoder ----\n')
 
-    optimizer = keras.optimizers.Adam(train_cfg['encoder']['lr'])
-    eCED.encoder.compile(optimizer=optimizer, loss='mse')
-
     # callbacks, save the best model, and early stop if no improvement in val_loss
     stop_early = keras.callbacks.EarlyStopping(monitor='val_loss',
                                                patience=10, restore_best_weights=True)
-    save_best = keras.callbacks.ModelCheckpoint(filepath=os.path.join(weights_dir, 'encoder'),
+    save_best = keras.callbacks.ModelCheckpoint(filepath=os.path.join(weights_dir, 'encoder.h5'),
                                                 monitor='val_loss', save_best_only=True)
 
     start_time = time.time()
-    history = eCED.encoder.fit(
-        x_train, y_train, epochs=train_cfg['encoder']['epochs'],
+    history = encoder.model.fit(
+        x_train, y_train, epochs=train_cfg['epochs'],
         validation_data=(x_valid, y_valid), batch_size=BATCH_SIZE,
         callbacks=[stop_early, save_best])
 
     total_time = time.time() - start_time
+    print(f'\n---- Training complete, epochs: {len(history.history["loss"])}, total time {total_time} ----\n')
     
     # Plot training and validation loss
+    print('\n---- Plotting loss ----\n')
+
     train_loss_l = np.array(history.history['loss'])
     valid_loss_l = np.array(history.history['val_loss'])
 
@@ -157,18 +169,18 @@ if __name__ == '__main__':
     # eCED.encoder.save_weights(os.path.join(
     #     weights_dir, 'eCED_weights_encoder.h5'), save_format='h5')
 
+    print('\n---- Saving a summary ----\n')
+
     # save file with experiment configuration
     config_dict = {}
-    config_dict['encoder'] = {
-        'epochs': train_cfg['encoder']['epochs'],
-        'lr': train_cfg['encoder']['lr'],
-        'dataset_percent': dataset_keep_percent,
-        'cnn_filters': list(cnn_filters),
+    config_dict['encoder'] = train_cfg.copy()
+    config_dict['encoder'].update({
+        'epochs': len(history.history["loss"]),
         'min_train_loss': float(np.min(train_loss_l)),
         'min_valid_loss': float(np.min(valid_loss_l)),
         'total_train_time': total_time,
         'used_gpus': len(gpus)
-    }
+    })
 
     # save config_dict
     with open(os.path.join(trial_dir, 'encoder-summary.yml'), 'w') as configfile:

@@ -4,9 +4,93 @@ import numpy as np
 from utils import normalize_params
 
 
+class Encoder(keras.Model):
+    # Pooling can be None, or 'Average' or 'Max'
+    def __init__(self, input_shape, dense_layers, filters,
+                 cropping=[[0, 0], [0, 0]], kernel_size=3, strides=[2, 2],
+                 activation='relu',
+                 pooling=None, pooling_size=[2, 2],
+                 pooling_strides=[1, 1], pooling_padding='valid',
+                 dropout=0.0, learning_rate=0.002, loss='mse',
+                 **kwargs):
+        super(Encoder, self).__init__()
+        self.latent_dim = dense_layers[-1]
+        self.inputShape = input_shape
+
+        # The encoder consumes the input and produces the latents features
+        # Which are 7: phEr, enEr, bl, inten, Vrf, mu, VrfSPS
+
+        # Initialize the model
+        self.model = keras.Sequential()
+        # set the input size
+        self.model.add(keras.layers.InputLayer(input_shape=self.inputShape))
+        # crop the edges
+        self.model.add(keras.layers.Cropping2D(
+            cropping=cropping, name='Crop'))
+        
+        # For evey Convolutional layer
+        for i, f in enumerate(filters):
+            # Add the Convolution
+            self.model.add(keras.layers.Conv2D(
+                filters=f, kernel_size=kernel_size, strides=strides,
+                activation=activation, name=f'CNN_{i+1}'))
+            # Optional pooling after the convolution
+            if pooling == 'Max':
+                self.model.add(keras.layers.MaxPooling2D(
+                    pool_size=pooling_size, strides=pooling_strides,
+                    padding=pooling_padding, name=f'MaxPooling_{i+1}'
+                ))
+            elif pooling == 'Average':
+                self.model.add(keras.layers.AveragePooling2D(
+                    pool_size=pooling_size, strides=pooling_strides,
+                    padding=pooling_padding, name=f'AveragePooling_{i+1}'
+                ))
+        # t_shape = self.model.layers[-1].output_shape[1:]
+        # Flatten after the convolutions
+        self.model.add(keras.layers.Flatten(name='Flatten'))
+        # For each optional dense layer
+        for i, layer in enumerate(dense_layers[:-1]):
+            # Add the layer
+            self.model.add(keras.layers.Dense(layer, activation=activation,
+                                              name=f'Dense_{i+1}'))
+            # Add dropout optionally
+            if dropout > 0 and dropout < 1:
+                self.model.add(keras.layers.Dropout(dropout, name=f'Dropout_{i+1}'))
+        # Add the final layer
+        self.model.add(keras.layers.Dense(dense_layers[-1], name=f'Output'))
+        
+        # Also initialize the optimizer and compile the model
+        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+        self.model.compile(optimizer=optimizer, loss=loss)
+
+        # self.extender = keras.Sequential()
+        # self.extender.add(keras.layers.InputLayer(
+        #     input_shape=self.latent_dim + self.additional_latent_dim))
+
+        # t_shape = (t_shape[0]+1, t_shape[1]+1, int(t_shape[2]/2))
+
+        # self.decoder = keras.Sequential()
+        # self.decoder.add(keras.layers.InputLayer(
+        #     input_shape=(self.latent_dim + self.additional_latent_dim)))
+        # self.decoder.add(keras.layers.Dense(
+        #     units=np.prod(t_shape), activation=tf.nn.relu))
+        # self.decoder.add(keras.layers.Reshape(target_shape=t_shape))
+        # for f in reversed(filters):
+        #     self.decoder.add(keras.layers.Conv2DTranspose(
+        #         filters=f, kernel_size=3, strides=2, padding='same', activation='relu'))
+        # self.decoder.add(keras.layers.Conv2DTranspose(
+        #     filters=1, kernel_size=3, strides=1, padding='same'))
+
+    @tf.function
+    def encode(self, x):
+        return self.model(x)
+
+
 class extendedCED(keras.Model):
 
-    def __init__(self, latent_dim, additional_latent_dim, input_shape, filters):
+    def __init__(self, latent_dim, additional_latent_dim, input_shape, filters,
+                 kernel_size=3, strides=(2, 2),
+                 ):
         super(extendedCED, self).__init__()
         self.latent_dim = latent_dim
         self.inputShape = input_shape
@@ -14,7 +98,7 @@ class extendedCED(keras.Model):
 
         # The encoder consumes the input and produces the latents features
         # Which are: phEr, enEr, bl, inten, Vrf, mu + VrfSPS
-        # 
+        #
         self.encoder = keras.Sequential()
         self.encoder.add(keras.layers.InputLayer(input_shape=self.inputShape))
         for f in filters:
@@ -53,7 +137,7 @@ class extendedCED(keras.Model):
     @tf.function
     def extend(self, encoded_latent_vec, turn_normalized):
         return self.extender(keras.layers.Concatenate()([encoded_latent_vec,
-                                                            tf.transpose(keras.layers.Flatten()(turn_normalized))]))
+                                                         tf.transpose(keras.layers.Flatten()(turn_normalized))]))
 
     @tf.function
     def predictPS(self, T_images_input, turn_normalized):
@@ -68,14 +152,14 @@ def mse_loss(model, turn_normalized, T_image, PS_image, phErs, enErs, bls, inten
     predicted_beam_logit, latents = model.predictPS(
         T_image, turn_normalized, training=True)
     return keras.metrics.mse(keras.backend.flatten(PS_image),
-                                keras.backend.flatten(predicted_beam_logit)),\
+                             keras.backend.flatten(predicted_beam_logit)),\
         keras.metrics.mse(keras.backend.flatten(latents),
-                             keras.backend.flatten(tf.transpose(tf.convert_to_tensor([phErs_norm,
-                                                                                         enErs_norm,
-                                                                                         bls_norm,
-                                                                                         intens_norm,
-                                                                                         Vrf_norm,
-                                                                                         mu_norm]))))
+                          keras.backend.flatten(tf.transpose(tf.convert_to_tensor([phErs_norm,
+                                                                                   enErs_norm,
+                                                                                   bls_norm,
+                                                                                   intens_norm,
+                                                                                   Vrf_norm,
+                                                                                   mu_norm]))))
 
 
 @tf.function
@@ -84,14 +168,14 @@ def mse_loss_encoder(model, T_imgs, phErs, enErs, bls, intens, Vrfs, mus, VrfSPS
         normalize_params(phErs, enErs, bls, intens, Vrfs, mus, VrfSPSs)
     latents = model.encode(T_imgs)
     return keras.metrics.mse(keras.backend.flatten(latents),
-                                keras.backend.flatten(
-                                    tf.transpose(tf.convert_to_tensor([phErs,
-                                                                       enErs,
-                                                                       bls,
-                                                                       intens,
-                                                                       Vrfs,
-                                                                       mus,
-                                                                       VrfSPSs]))))
+                             keras.backend.flatten(
+        tf.transpose(tf.convert_to_tensor([phErs,
+                                           enErs,
+                                           bls,
+                                           intens,
+                                           Vrfs,
+                                           mus,
+                                           VrfSPSs]))))
 
 
 @tf.function
@@ -101,4 +185,4 @@ def mse_loss_decoder(model, norm_turns, PS_imgs, phErs, enErs, bls, intens,
         normalize_params(phErs, enErs, bls, intens, Vrfs, mus, VrfSPSs)))
     predicted_beam_logit = model.decode(model.extend(norm_pars, norm_turns))
     return keras.metrics.mse(keras.backend.flatten(PS_imgs),
-                                keras.backend.flatten(predicted_beam_logit))
+                             keras.backend.flatten(predicted_beam_logit))
