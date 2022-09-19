@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras
 import numpy as np
-from utils import normalize_params
+from utils import normalize_params, conv2D_output_size
 
 
 class Encoder(keras.Model):
@@ -27,7 +27,7 @@ class Encoder(keras.Model):
         # crop the edges
         self.model.add(keras.layers.Cropping2D(
             cropping=cropping, name='Crop'))
-        
+
         # For evey Convolutional layer
         for i, f in enumerate(filters):
             # Add the Convolution
@@ -55,10 +55,11 @@ class Encoder(keras.Model):
                                               name=f'Dense_{i+1}'))
             # Add dropout optionally
             if dropout > 0 and dropout < 1:
-                self.model.add(keras.layers.Dropout(dropout, name=f'Dropout_{i+1}'))
+                self.model.add(keras.layers.Dropout(
+                    dropout, name=f'Dropout_{i+1}'))
         # Add the final layer
         self.model.add(keras.layers.Dense(dense_layers[-1], name=f'Output'))
-        
+
         # Also initialize the optimizer and compile the model
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
         self.model.compile(optimizer=optimizer, loss=loss)
@@ -84,6 +85,78 @@ class Encoder(keras.Model):
     @tf.function
     def encode(self, x):
         return self.model(x)
+
+
+class Decoder(keras.Model):
+    def __init__(self, output_shape, dense_layers, filters,
+                 kernel_size=3, strides=[2, 2],
+                 activation='relu', final_kernel_size=3,
+                 dropout=0.0, learning_rate=0.002, loss='mse',
+                 **kwargs):
+        super(Decoder, self).__init__()
+        assert filters[-1] == 1
+        assert dense_layers[0] == 8
+
+        # I calculate the dimension if I was moving:
+        # output_shape --> filter[-1] --> filter[-2] .. filter[0]
+
+        # Generate the inverse model (encoder) to find the t_shape
+        temp = keras.Sequential()
+        temp.add(keras.Input(shape=output_shape))
+        temp.add(keras.layers.Conv2D(filters=filters[-1], padding='same',
+                                     strides=1, kernel_size=final_kernel_size))
+
+        for filter in (filters[::-1])[1:]:
+            temp.add(keras.layers.Conv2D(filters=filter, padding='same',
+                                         strides=strides, kernel_size=kernel_size))
+
+        t_shape = temp.layers[-1].output_shape[1:]
+        # print(temp.summary())
+        del temp
+        # t_shape = (t_shape[0]+1, t_shape[1]+1, int(t_shape[2]/2))
+
+        # Initialize the model
+        self.model = keras.Sequential()
+        # set the input size
+        self.model.add(keras.Input(shape=dense_layers[0], name='Input'))
+
+        # For each optional dense layer
+        for i, layer in enumerate(dense_layers[1:]):
+            # Add the layer
+            self.model.add(keras.layers.Dense(layer, activation=activation,
+                                              name=f'Dense_{i+1}'))
+            # Add dropout optionally
+            if dropout > 0 and dropout < 1:
+                self.model.add(keras.layers.Dropout(
+                    dropout, name=f'Dropout_{i+1}'))
+
+        # extend to needed t_shape and reshape
+        self.model.add(keras.layers.Dense(
+            units=np.prod(t_shape), activation='relu', name='Expand'))
+        self.model.add(keras.layers.Reshape(
+            target_shape=t_shape, name='Reshape'))
+
+        # For evey Convolutional layer
+        for i, f in enumerate(filters[:-1]):
+            # Add the Convolution
+            self.model.add(keras.layers.Conv2DTranspose(
+                filters=f, kernel_size=kernel_size, strides=strides,
+                activation=activation, name=f'CNN_{i+1}', padding='same'))
+
+        # Final output convolution
+        self.model.add(keras.layers.Conv2DTranspose(
+            filters=filters[-1], kernel_size=final_kernel_size,
+            strides=1, padding='same'))
+
+        assert self.model.layers[-1].output_shape[1:] == output_shape
+        # Also initialize the optimizer and compile the model
+        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+        self.model.compile(optimizer=optimizer, loss=loss)
+
+
+    @tf.function
+    def decode(self, z):
+        return self.decoder(z)
 
 
 class extendedCED(keras.Model):

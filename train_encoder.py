@@ -149,7 +149,7 @@ if __name__ == '__main__':
     history = encoder.model.fit(
         x_train, y_train, epochs=train_cfg['epochs'],
         validation_data=(x_valid, y_valid), batch_size=BATCH_SIZE,
-        callbacks=[stop_early, save_best])
+        callbacks=[save_best])
 
     total_time = time.time() - start_time
     print(f'\n---- Training complete, epochs: {len(history.history["loss"])}, total time {total_time} ----\n')

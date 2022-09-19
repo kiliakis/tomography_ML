@@ -15,13 +15,16 @@ parser.add_argument('-o', '--outfile', type=str, default='trials-sorted.csv',
                     help='The file to save the sorted report.'
                     ' Default: trials-sorted.csv')
 
-if __name__ == '__main__':
-    args = parser.parse_args()
+parser.add_argument('-c', '--columns', nargs='+', type=int, default=[],
+                    help='Which columns to show in stdout.'
+                    ' Default: all columns')
+
+def extract_trials(indir):
     header = ['model', 'vld_ls', 'trn_ls', 'epoch', 'data',
               'filters', 'kernels', 'dense', 'activ', 'dropout', 
               'pooling', 'crop', 'lr', 'gpu', 'time', 'date']
     rows = []
-    for dirs, subdirs, files in os.walk(args.indir):
+    for dirs, subdirs, files in os.walk(indir):
         for file in files:
             if 'summary.yml' not in file:
                 continue
@@ -29,23 +32,36 @@ if __name__ == '__main__':
                 summary = yaml.load(f, Loader=yaml.FullLoader)
             for k, v in summary.items():
                 date = os.path.basename(dirs)
-                kernels = f'{v["kernel_size"], v["strides"]}'
-                pooling = f'{v["pooling"], v["pooling_size"], v["pooling_strides"], v["pooling_padding"]}'
-                filters = '-'.join(map(str, v['filters']))
-                dense = '-'.join(map(str, v['dense_layers']))
-                crop = '-'.join(map(str, v['cropping']))
+                kernels = f'{v.get("kernel_size", 3), v.get("strides", 2)}'
+                pooling = f'{v.get("pooling", 0), v.get("pooling_size", 0), v.get("pooling_strides", 0), v.get("pooling_padding", 0)}'
+                filters = '-'.join(map(str, v.get('filters', [0])))
+                dense = '-'.join(map(str, v.get('dense_layers', [0])))
+                crop = '-'.join(map(str, v.get('cropping', [0, 0])))
 
                 # date = date.replace('-', '').replace('_', '', 2)
-                row = [k[:3], f'{v["min_valid_loss"]:.4f}', f'{v["min_train_loss"]:.4f}',
-                    str(v['epochs']), str(v['dataset%']), filters, kernels,
-                     dense, v['activation'], str(v['dropout']), pooling, crop,
-                    str(v['lr']), str(v['used_gpus']), f'{v["total_train_time"]:.1f}',
+                row = [k[:3], f'{v.get("min_valid_loss", 0):.2e}', f'{v.get("min_train_loss", 0):.2e}',
+                    str(v.get('epochs', 0)), str(v.get('dataset%', 0)), filters, kernels,
+                     dense, v.get('activation', 0), str(v.get('dropout', 0)), pooling, crop,
+                    str(v.get('lr', 0)), str(v.get('used_gpus', 0)), f'{v.get("total_train_time", 0):.1f}',
                     date]
                 rows.append(row)
     
     rows = sorted(rows, key=lambda a: (a[0], a[1]))
+    return header, rows
+
+if __name__ == '__main__':
+    args = parser.parse_args()
+
+    header, rows = extract_trials(args.indir)
 
     # print the results
+    if len(args.columns):
+        idx = args.columns
+        header = [header[i] for i in idx]
+        # header = header[idx]
+    else:
+        idx = np.arange(len(header), dtype=int)
+
     encode_t = PrettyTable(header)
     encode_t.align = 'l'
     encode_t.border = False
@@ -56,8 +72,10 @@ if __name__ == '__main__':
 
     for r in rows:
         if 'enc' in r[0]:
+            r = [r[i] for i in idx]
             encode_t.add_row(r)
         if 'dec' in r[0]:
+            r = [r[i] for i in idx]
             decode_t.add_row(r)
     print(encode_t)
     print()
@@ -67,3 +85,4 @@ if __name__ == '__main__':
         writer = csv.writer(f, delimiter='\t')
         writer.writerow(header)
         writer.writerows(rows)
+

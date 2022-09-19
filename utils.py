@@ -22,6 +22,7 @@ def plot_loss(lines, title='', figname=None):
         plt.savefig(figname, dpi=300)
     plt.close()
 
+
 def get_cmap(path=''):
 
     if path == '':
@@ -140,7 +141,8 @@ def load_encoder_data(pk_file, normalize=True):
     mu = float(params_dict['mu'])
     VrfSPS = float(params_dict['VrfSPS'])
     if normalize:
-        phEr, enEr, bl, inten, Vrf, mu, VrfSPS  = normalize_params(phEr, enEr, bl, inten, Vrf, mu, VrfSPS)
+        phEr, enEr, bl, inten, Vrf, mu, VrfSPS = normalize_params(
+            phEr, enEr, bl, inten, Vrf, mu, VrfSPS)
     # T_normFactor = float(params_dict['T_normFactor'])
     # B_normFactor = float(params_dict['B_normFactor'])
     # return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, Vrf, mu, VrfSPS, T_normFactor, B_normFactor
@@ -161,7 +163,8 @@ def load_decoder_data(pk_file):
     Vrf = float(params_dict['Vrf'])
     mu = float(params_dict['mu'])
     VrfSPS = float(params_dict['VrfSPS'])
-    phEr, enEr, bl, inten, Vrf, mu, VrfSPS  = normalize_params(phEr, enEr, bl, inten, Vrf, mu, VrfSPS)
+    phEr, enEr, bl, inten, Vrf, mu, VrfSPS = normalize_params(
+        phEr, enEr, bl, inten, Vrf, mu, VrfSPS)
 
     # T_normFactor = float(params_dict['T_normFactor'])
     # B_normFactor = float(params_dict['B_normFactor'])
@@ -220,6 +223,7 @@ def load_model_data_old(pk_file):
     B_normFactor = float(params_dict['B_normFactor'])
     return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, T_normFactor, B_normFactor
 
+
 def encoder_files_to_tensors(files, normalize=True):
     feature_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
     output_arr = np.zeros((len(files), 7), dtype=np.float32)
@@ -231,6 +235,7 @@ def encoder_files_to_tensors(files, normalize=True):
     y_train = tf.convert_to_tensor(output_arr)
     return x_train, y_train
 
+
 def decoder_files_to_tensors(files):
     feature_arr = np.zeros((len(files), 8), dtype=np.float32)
     output_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
@@ -241,6 +246,7 @@ def decoder_files_to_tensors(files):
     x_train = tf.convert_to_tensor(feature_arr)
     y_train = tf.convert_to_tensor(output_arr)
     return x_train, y_train
+
 
 def normalize_param(val, mu, sig):
     return (val-mu)/sig
@@ -260,16 +266,17 @@ def unnormalize_param(norm_val, mu, sig):
 #                      mu_mu=2.89, mu_sig=1.11,
 #                      VrfSPS_mu=8.51, VrfSPS_sig=2.02
 #                      ):
-    
+
+
 def normalize_params(phErs, enErs, bls, intens, Vrf, mu, VrfSPS,
-                    phEr_mu=0, phEr_sig=50,
-                    enEr_mu=0, enEr_sig=100,
-                    bl_mu=1.4e-9, bl_sig=0.2e-9,
-                    intens_mu=1.225e11, intens_sig=0.37e11,
-                    Vrf_mu=6, Vrf_sig=2.2,
-                    mu_mu=2, mu_sig=1,
-                    VrfSPS_mu=8.5, VrfSPS_sig=2.2
-                    ):
+                     phEr_mu=0, phEr_sig=50,
+                     enEr_mu=0, enEr_sig=100,
+                     bl_mu=1.4e-9, bl_sig=0.2e-9,
+                     intens_mu=1.225e11, intens_sig=0.37e11,
+                     Vrf_mu=6, Vrf_sig=2.2,
+                     mu_mu=2, mu_sig=1,
+                     VrfSPS_mu=8.5, VrfSPS_sig=2.2
+                     ):
 
     return normalize_param(phErs, phEr_mu, phEr_sig),\
         normalize_param(enErs, enEr_mu, enEr_sig),\
@@ -294,15 +301,15 @@ def normalize_params(phErs, enErs, bls, intens, Vrf, mu, VrfSPS,
 #                        ):
 
 def unnormalize_params(phErs_norm, enErs_norm, bls_norm, intens_norm, Vrf_norm,
-                    mu_norm, VrfSPS_norm,
-                    phEr_mu=0, phEr_sig=50,
-                    enEr_mu=0, enEr_sig=100,
-                    bl_mu=1.4e-9, bl_sig=0.2e-9,
-                    intens_mu=1.225e11, intens_sig=0.37e11,
-                    Vrf_mu=6, Vrf_sig=2.2,
-                    mu_mu=2, mu_sig=1,
-                    VrfSPS_mu=8.5, VrfSPS_sig=2.2
-                    ):
+                       mu_norm, VrfSPS_norm,
+                       phEr_mu=0, phEr_sig=50,
+                       enEr_mu=0, enEr_sig=100,
+                       bl_mu=1.4e-9, bl_sig=0.2e-9,
+                       intens_mu=1.225e11, intens_sig=0.37e11,
+                       Vrf_mu=6, Vrf_sig=2.2,
+                       mu_mu=2, mu_sig=1,
+                       VrfSPS_mu=8.5, VrfSPS_sig=2.2
+                       ):
 
     return unnormalize_param(phErs_norm, phEr_mu, phEr_sig),\
         unnormalize_param(enErs_norm, enEr_mu, enEr_sig),\
@@ -458,3 +465,32 @@ def filterFileNamesInFolder(data_path, filter_text=['']):
 
 def normalize(vec):
     return vec/np.max(vec)
+
+
+def get_best_model_timestamp(path, model='enc'):
+    from sort_trial_summaries import extract_trials
+    header, rows = extract_trials(path)
+    for row in rows:
+        if model in row[header.index('model')]:
+            return row[header.index('date')]
+
+
+def conv2D_output_size(input_size, out_channels, padding, kernel_size, stride,
+                       dilation=None):
+    if dilation is None:
+        dilation = (1, ) * 2
+    if isinstance(padding, int):
+        padding = (padding, ) * 2
+    if isinstance(kernel_size, int):
+        kernel_size = (kernel_size, ) * 2
+    if isinstance(stride, int):
+        stride = (stride, ) * 2
+
+    output_size = (
+        np.floor((input_size[0] + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) /
+                 stride[0] + 1).astype(int),
+        np.floor((input_size[1] + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) /
+                 stride[1] + 1).astype(int),
+        out_channels,
+    )
+    return output_size

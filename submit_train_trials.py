@@ -21,65 +21,108 @@ else:
 TRIALS_DIR = os.path.join(PROJECT_DIR, 'trials')
 
 configs = [
-    {
-        'encoder': {
-            'epochs': 30,
-            'dense_layers': [256, 64, 7],
-            'filters': [32, 64, 128, 256, 256],
-            'cropping': [0, 0],
-            'kernel_size': 3, 'strides': [2, 2],
-            'activation': 'selu',
-            'pooling': None, 'pooling_size': [0, 0],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-            'dropout': 0,
-            'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 1.0
-        },
-    },
-    {
-        'encoder': {
-            'epochs': 30,
-            'dense_layers': [512, 64, 7],
-            'filters': [32, 64, 128, 256, 256],
-            'cropping': [0, 0],
-            'kernel_size': 3, 'strides': [2, 2],
-            'activation': 'elu',
-            'pooling': None, 'pooling_size': [0, 0],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-            'dropout': 0,
-            'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 1.0
-        },
-    },
     # {
     #     'encoder': {
-    #         'epochs': 30,
-    #         'dense_layers': [7],
+    #         'epochs': 50,
+    #         'dense_layers': [256, 64, 7],
+    #         'filters': [32, 64, 128, 256, 256],
+    #         'cropping': [0, 0],
+    #         'kernel_size': 3, 'strides': [1, 1],
+    #         'activation': 'relu',
+    #         'pooling': 'Max', 'pooling_size': [2, 2],
+    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+    #         'dropout': 0.1,
+    #         'loss': 'mse', 'lr': 1e-3,
+    #         'dataset%': 1.0
+    #     },
+    # },
+    # {
+    #     'encoder': {
+    #         'epochs': 50,
+    #         'dense_layers': [256, 64, 7],
     #         'filters': [32, 64, 128, 256, 256],
     #         'cropping': [0, 0],
     #         'kernel_size': 3, 'strides': [1, 1],
     #         'activation': 'relu',
     #         'pooling': 'Average', 'pooling_size': [2, 2],
     #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-    #         'dropout': 0,
+    #         'dropout': 0.1,
     #         'loss': 'mse', 'lr': 1e-3,
     #         'dataset%': 1.0
     #     },
     # },
     # {
-    #     'train_cfg': {
-    #         'decoder': {'epochs': 30, 'lr': 0.001},
+    #     'encoder': {
+    #         'epochs': 50,
+    #         'dense_layers': [256, 64, 7],
+    #         'filters': [32, 64, 128, 256],
+    #         'cropping': [0, 0],
+    #         'kernel_size': 3, 'strides': [1, 1],
+    #         'activation': 'relu',
+    #         'pooling': 'Max', 'pooling_size': [2, 2],
+    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+    #         'dropout': 0.1,
+    #         'loss': 'mse', 'lr': 1e-3,
+    #         'dataset%': 1.0
     #     },
-    #     'cnn_filters': [32, 64, 128, 256],
-    #     'dataset_keep_percent': 1,
     # },
-    # {
-    #     'train_cfg': {
-    #         'decoder': {'epochs': 30, 'lr': 0.001},
-    #     },
-    #     'cnn_filters': [32, 64, 128, 256, 256],
-    #     'dataset_keep_percent': 1,
-    # },
+    {
+        'decoder': {
+            'epochs': 50,
+            'dense_layers': [8, 512],
+            'filters': [256, 64, 32, 1],
+            'kernel_size': 3, 
+            'strides': [2, 2],
+            'final_kernel_size': 3,
+            'activation': 'relu',
+            'dropout': 0.1,
+            'loss': 'mse', 'lr': 1e-3,
+            'dataset%': 1.0
+        },
+    },
+    {
+        'decoder': {
+            'epochs': 50,
+            'dense_layers': [8, 1024],
+            'filters': [256, 64, 32, 1],
+            'kernel_size': 3,
+            'strides': [2, 2],
+            'final_kernel_size': 3,
+            'activation': 'relu',
+            'dropout': 0.1,
+            'loss': 'mse', 'lr': 1e-3,
+            'dataset%': 1.0
+        },
+    },
+    {
+        'decoder': {
+            'epochs': 50,
+            'dense_layers': [8, 1024],
+            'filters': [256, 64, 1],
+            'kernel_size': 3,
+            'strides': [2, 2],
+            'final_kernel_size': 3,
+            'activation': 'relu',
+            'dropout': 0.1,
+            'loss': 'mse', 'lr': 1e-3,
+            'dataset%': 1.0
+        },
+    },
+    {
+        'decoder': {
+            'epochs': 50,
+            'dense_layers': [8, 1024],
+            'filters': [128, 64, 32, 1],
+            'kernel_size': 3,
+            'strides': [2, 2],
+            'final_kernel_size': 3,
+            'activation': 'relu',
+            'dropout': 0.1,
+            'loss': 'mse', 'lr': 1e-3,
+            'dataset%': 1.0
+        },
+    },
+
 ]
 
 parser = argparse.ArgumentParser(description='Submit multiple train trials in htcondor',
