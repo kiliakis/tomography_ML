@@ -46,7 +46,7 @@ def extract_trials(indir):
                     date]
                 rows.append(row)
     
-    rows = sorted(rows, key=lambda a: (a[0], float(a[1])))
+    rows = sorted(rows, key=lambda a: (a[0], float(a[1]), float(a[2])))
     return header, rows
 
 if __name__ == '__main__':
@@ -87,14 +87,16 @@ if __name__ == '__main__':
             reader = csv.reader(f, delimiter='\t')
             # make sure the header is the same
             file_header = next(reader)
-            assert np.equal(header, file_header)
+            assert header==file_header
             # convert to set to remove duplicates
             rows = ['@'.join(row) for row in rows]
             rows = set(rows)
             for row in reader:
-                rows.insert('@'.join(row))
-            rows = [row.split('@') for row in rows]
-    
+                rows.add('@'.join(row))
+        # split back and re-sort
+        rows = [row.split('@') for row in rows]
+        rows = sorted(rows, key=lambda a: (a[0], float(a[1]), float(a[2])))
+
     # Then save to it
     with open(args.outfile, 'w') as f:
         writer = csv.writer(f, delimiter='\t')
