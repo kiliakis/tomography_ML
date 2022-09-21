@@ -81,6 +81,21 @@ if __name__ == '__main__':
     print()
     print(decode_t)
 
+    if os.path.isfile(args.outfile):
+        # if file exists, I open and append to it
+        with open(args.outfile, 'r') as f:
+            reader = csv.reader(f, delimiter='\t')
+            # make sure the header is the same
+            file_header = next(reader)
+            assert np.equal(header, file_header)
+            # convert to set to remove duplicates
+            rows = ['@'.join(row) for row in rows]
+            rows = set(rows)
+            for row in reader:
+                rows.insert('@'.join(row))
+            rows = [row.split('@') for row in rows]
+    
+    # Then save to it
     with open(args.outfile, 'w') as f:
         writer = csv.writer(f, delimiter='\t')
         writer.writerow(header)
