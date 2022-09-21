@@ -21,93 +21,81 @@ else:
 TRIALS_DIR = os.path.join(PROJECT_DIR, 'trials')
 
 configs = [
-    # {
-    #     'encoder': {
-    #         'epochs': 50,
-    #         'dense_layers': [256, 64, 7],
-    #         'filters': [32, 64, 128, 256, 256],
-    #         'cropping': [0, 0],
-    #         'kernel_size': 3, 'strides': [1, 1],
-    #         'activation': 'relu',
-    #         'pooling': 'Max', 'pooling_size': [2, 2],
-    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-    #         'dropout': 0.1,
-    #         'loss': 'mse', 'lr': 1e-3,
-    #         'dataset%': 1.0
-    #     },
-    # },
-    # {
-    #     'encoder': {
-    #         'epochs': 50,
-    #         'dense_layers': [256, 64, 7],
-    #         'filters': [32, 64, 128, 256, 256],
-    #         'cropping': [0, 0],
-    #         'kernel_size': 3, 'strides': [1, 1],
-    #         'activation': 'relu',
-    #         'pooling': 'Average', 'pooling_size': [2, 2],
-    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-    #         'dropout': 0.1,
-    #         'loss': 'mse', 'lr': 1e-3,
-    #         'dataset%': 1.0
-    #     },
-    # },
-    # {
-    #     'encoder': {
-    #         'epochs': 50,
-    #         'dense_layers': [256, 64, 7],
-    #         'filters': [32, 64, 128, 256],
-    #         'cropping': [0, 0],
-    #         'kernel_size': 3, 'strides': [1, 1],
-    #         'activation': 'relu',
-    #         'pooling': 'Max', 'pooling_size': [2, 2],
-    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-    #         'dropout': 0.1,
-    #         'loss': 'mse', 'lr': 1e-3,
-    #         'dataset%': 1.0
-    #     },
-    # },
     {
-        'decoder': {
+        'encoder': {
             'epochs': 100,
-            'dense_layers': [8, 512],
-            'filters': [256, 64, 32, 1],
-            'kernel_size': 3, 
-            'strides': [2, 2],
-            'final_kernel_size': 3,
+            'dense_layers': [512, 7],
+            'filters': [32, 64, 128, 256],
+            'cropping': [0, 0],
+            'kernel_size': 3, 'strides': [1, 1],
             'activation': 'relu',
-            'dropout': 0.0,
+            'pooling': None, 'pooling_size': [2, 2],
+            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+            'dropout': 0.1,
             'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 1.0
+            'dataset%': 0.1,
+            'normalization': 'minmax'
         },
     },
     {
-        'decoder': {
+        'encoder': {
             'epochs': 100,
-            'dense_layers': [8, 512],
-            'filters': [256, 64, 32, 1],
-            'kernel_size': 3,
-            'strides': [2, 2],
-            'final_kernel_size': 3,
+            'dense_layers': [512, 7],
+            'filters': [32, 64, 128, 256],
+            'cropping': [0, 0],
+            'kernel_size': 3, 'strides': [1, 1],
             'activation': 'relu',
-            'dropout': 0.0,
-            'loss': 'mse', 'lr': 2e-3,
-            'dataset%': 1.0
+            'pooling': None, 'pooling_size': [2, 2],
+            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+            'dropout': 0.05,
+            'loss': 'mse', 'lr': 1e-3,
+            'dataset%': 0.1,
+            'normalization': 'minmax'
+
         },
     },
-    {
-        'decoder': {
-            'epochs': 100,
-            'dense_layers': [8, 512],
-            'filters': [256, 64, 32, 1],
-            'kernel_size': 3,
-            'strides': [2, 2],
-            'final_kernel_size': 3,
-            'activation': 'relu',
-            'dropout': 0.0,
-            'loss': 'mse', 'lr': 5e-3,
-            'dataset%': 1.0
-        },
-    },
+    # {
+    #     'decoder': {
+    #         'epochs': 100,
+    #         'dense_layers': [8, 512],
+    #         'filters': [256, 64, 32, 1],
+    #         'kernel_size': 3, 
+    #         'strides': [2, 2],
+    #         'final_kernel_size': 3,
+    #         'activation': 'relu',
+    #         'dropout': 0.0,
+    #         'loss': 'mse', 'lr': 1e-3,
+    #         'dataset%': 1.0
+    #     },
+    # },
+    # {
+    #     'decoder': {
+    #         'epochs': 100,
+    #         'dense_layers': [8, 512],
+    #         'filters': [256, 64, 32, 1],
+    #         'kernel_size': 3,
+    #         'strides': [2, 2],
+    #         'final_kernel_size': 3,
+    #         'activation': 'relu',
+    #         'dropout': 0.0,
+    #         'loss': 'mse', 'lr': 2e-3,
+    #         'dataset%': 1.0
+    #     },
+    # },
+    # {
+    #     'decoder': {
+    #         'epochs': 100,
+    #         'dense_layers': [8, 512],
+    #         'filters': [256, 64, 32, 1],
+    #         'kernel_size': 3,
+    #         'strides': [2, 2],
+    #         'final_kernel_size': 3,
+    #         'activation': 'relu',
+    #         'dropout': 0.0,
+    #         'loss': 'mse', 'lr': 5e-3,
+    #         'dataset%': 1.0
+    #     },
+    # },
 
 
 ]
@@ -144,6 +132,7 @@ if __name__ == '__main__':
             f.write("should_transfer_files   = IF_needed \n")
             f.write(f"request_gpus            = {USE_GPU} \n")
             f.write(f"request_cpus            = {CPU_CORES} \n")
+            # f.write(f"request_memory            = 10000M \n")
             # f.write("requirements            = regexp(\"V100\", TARGET.CUDADeviceName) \n")
             # f.write("Arch                    = \"INTEL\" \n ")
             f.write(f"+MaxRuntime            = {int(3600 * RUNTIME)} \n")
@@ -159,6 +148,7 @@ if __name__ == '__main__':
             f.write(f"{PYTHON} --version\n")
             f.write("lscpu \n")
             f.write(f"cd {PROJECT_DIR}\n")
+            f.write(f"export TF_GPU_ALLOCATOR=cuda_malloc_async\n")
             f.write(f"# Run the python script\n")
             if 'encoder' in config:
                 f.write(

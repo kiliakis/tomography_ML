@@ -126,7 +126,7 @@ def unnormalizeTurn(turn_num, maxTurns=300.0):
     return (turn_num+1)*(maxTurns/2)
 
 
-def load_encoder_data(pk_file, normalize=True):
+def load_encoder_data(pk_file, normalization, normalize=True):
     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
     T_img = np.reshape(T_img, T_img.shape+(1,))
     # PS = np.reshape(PS, PS.shape+(1,))
@@ -142,14 +142,14 @@ def load_encoder_data(pk_file, normalize=True):
     VrfSPS = float(params_dict['VrfSPS'])
     if normalize:
         phEr, enEr, bl, inten, Vrf, mu, VrfSPS = normalize_params(
-            phEr, enEr, bl, inten, Vrf, mu, VrfSPS)
+            phEr, enEr, bl, inten, Vrf, mu, VrfSPS, normalization=normalization)
     # T_normFactor = float(params_dict['T_normFactor'])
     # B_normFactor = float(params_dict['B_normFactor'])
     # return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, Vrf, mu, VrfSPS, T_normFactor, B_normFactor
     return (T_img, [phEr, enEr, bl, inten, Vrf, mu, VrfSPS])
 
 
-def load_decoder_data(pk_file):
+def load_decoder_data(pk_file, normalization):
     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
     # T_img = np.reshape(T_img, T_img.shape+(1,))
     PS = np.reshape(PS, PS.shape+(1,))
@@ -164,7 +164,7 @@ def load_decoder_data(pk_file):
     mu = float(params_dict['mu'])
     VrfSPS = float(params_dict['VrfSPS'])
     phEr, enEr, bl, inten, Vrf, mu, VrfSPS = normalize_params(
-        phEr, enEr, bl, inten, Vrf, mu, VrfSPS)
+        phEr, enEr, bl, inten, Vrf, mu, VrfSPS, normalization=normalization)
 
     # T_normFactor = float(params_dict['T_normFactor'])
     # B_normFactor = float(params_dict['B_normFactor'])
@@ -224,11 +224,12 @@ def load_model_data_old(pk_file):
     return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, T_normFactor, B_normFactor
 
 
-def encoder_files_to_tensors(files, normalize=True):
+def encoder_files_to_tensors(files, normalize=True, normalization='default'):
     feature_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
     output_arr = np.zeros((len(files), 7), dtype=np.float32)
     for i, file in enumerate(files):
-        features, output = load_encoder_data(file, normalize=normalize)
+        features, output = load_encoder_data(file, normalize=normalize,
+                                             normalization=normalization)
         feature_arr[i] = features
         output_arr[i] = output
     x_train = tf.convert_to_tensor(feature_arr)
@@ -236,16 +237,24 @@ def encoder_files_to_tensors(files, normalize=True):
     return x_train, y_train
 
 
-def decoder_files_to_tensors(files):
+def decoder_files_to_tensors(files, normalization='default'):
     feature_arr = np.zeros((len(files), 8), dtype=np.float32)
     output_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
     for i, file in enumerate(files):
-        features, output = load_decoder_data(file)
+        features, output = load_decoder_data(file, normalization=normalization)
         feature_arr[i] = features
         output_arr[i] = output
     x_train = tf.convert_to_tensor(feature_arr)
     y_train = tf.convert_to_tensor(output_arr)
     return x_train, y_train
+
+
+def minmax_normalize_param(val, min, max):
+    return (val-min)/(max-min)
+
+
+def minmax_unnormalize_param(norm_val, min, max):
+    return (max-min)*norm_val + min
 
 
 def normalize_param(val, mu, sig):
@@ -255,69 +264,149 @@ def normalize_param(val, mu, sig):
 def unnormalize_param(norm_val, mu, sig):
     return norm_val*sig+mu
 
-# TODO: Here add VrfSPS + mu and sig
-# These values originate from data
-# def normalize_params(phErs, enErs, bls, intens, Vrf, mu, VrfSPS,
-#                      phEr_mu=0.45, phEr_sig=29.14,
-#                      enEr_mu=-0.11, enEr_sig=58.23,
-#                      bl_mu=1.48e-9, bl_sig=0.167e-9,
-#                      intens_mu=1.565e11, intens_sig=0.843e11,
-#                      Vrf_mu=6.06, Vrf_sig=1.79,
-#                      mu_mu=2.89, mu_sig=1.11,
-#                      VrfSPS_mu=8.51, VrfSPS_sig=2.02
-#                      ):
-
 
 def normalize_params(phErs, enErs, bls, intens, Vrf, mu, VrfSPS,
-                     phEr_mu=0, phEr_sig=50,
-                     enEr_mu=0, enEr_sig=100,
-                     bl_mu=1.4e-9, bl_sig=0.2e-9,
-                     intens_mu=1.225e11, intens_sig=0.37e11,
-                     Vrf_mu=6, Vrf_sig=2.2,
-                     mu_mu=2, mu_sig=1,
-                     VrfSPS_mu=8.5, VrfSPS_sig=2.2
+                     normalization  # can be std or minmax
                      ):
+    if normalization == 'std':
+        phEr_mu = 0.45
+        phEr_sig = 29.14
+        enEr_mu = -0.11
+        enEr_sig = 58.23
+        bl_mu = 1.48e-9
+        bl_sig = 0.167e-9
+        intens_mu = 1.565e11
+        intens_sig = 0.843e11
+        Vrf_mu = 6.06
+        Vrf_sig = 1.79
+        mu_mu = 2.89
+        mu_sig = 1.11
+        VrfSPS_mu = 8.51
+        VrfSPS_sig = 2.02
+        return normalize_param(phErs, phEr_mu, phEr_sig),\
+            normalize_param(enErs, enEr_mu, enEr_sig),\
+            normalize_param(bls, bl_mu, bl_sig),\
+            normalize_param(intens, intens_mu, intens_sig),\
+            normalize_param(Vrf, Vrf_mu, Vrf_sig),\
+            normalize_param(mu, mu_mu, mu_sig),\
+            normalize_param(VrfSPS, VrfSPS_mu, VrfSPS_sig)
+    elif normalization == 'default':
+        phEr_mu = 0
+        phEr_sig = 50
+        enEr_mu = 0
+        enEr_sig = 100
+        bl_mu = 1.4e-9
+        bl_sig = 0.2e-9
+        intens_mu = 1.225e11
+        intens_sig = 0.37e11
+        Vrf_mu = 6
+        Vrf_sig = 2.2
+        mu_mu = 2
+        mu_sig = 1
+        VrfSPS_mu = 8.5
+        VrfSPS_sig = 2.2
+        return normalize_param(phErs, phEr_mu, phEr_sig),\
+            normalize_param(enErs, enEr_mu, enEr_sig),\
+            normalize_param(bls, bl_mu, bl_sig),\
+            normalize_param(intens, intens_mu, intens_sig),\
+            normalize_param(Vrf, Vrf_mu, Vrf_sig),\
+            normalize_param(mu, mu_mu, mu_sig),\
+            normalize_param(VrfSPS, VrfSPS_mu, VrfSPS_sig)
 
-    return normalize_param(phErs, phEr_mu, phEr_sig),\
-        normalize_param(enErs, enEr_mu, enEr_sig),\
-        normalize_param(bls, bl_mu, bl_sig),\
-        normalize_param(intens, intens_mu, intens_sig),\
-        normalize_param(Vrf, Vrf_mu, Vrf_sig),\
-        normalize_param(mu, mu_mu, mu_sig),\
-        normalize_param(VrfSPS, VrfSPS_mu, VrfSPS_sig)
+    elif normalization == 'minmax':
+        phEr_min = -50.
+        phEr_max = 50.
+        enEr_min = -100.
+        enEr_max = 100.
+        bl_min = 1.2e-9
+        bl_max = 1.8e-9
+        intens_min = 1.0e10
+        intens_max = 3.0e11
+        Vrf_min = 3.
+        Vrf_max = 9.2
+        mu_min = 1.
+        mu_max = 5.
+        VrfSPS_min = 5.
+        VrfSPS_max = 12.0
+        return minmax_normalize_param(phErs, phEr_min, phEr_max),\
+            minmax_normalize_param(enErs, enEr_min, enEr_max),\
+            minmax_normalize_param(bls, bl_min, bl_max),\
+            minmax_normalize_param(intens, intens_min, intens_max),\
+            minmax_normalize_param(Vrf, Vrf_min, Vrf_max),\
+            minmax_normalize_param(mu, mu_min, mu_max),\
+            minmax_normalize_param(VrfSPS, VrfSPS_min, VrfSPS_max)
 
-# TODO: Here add VrfSPS + mu and sig
 
-
-# def unnormalize_params(phErs_norm, enErs_norm, bls_norm, intens_norm, Vrf_norm,
-#                        mu_norm, VrfSPS_norm,
-#                        phEr_mu=0.45, phEr_sig=29.14,
-#                        enEr_mu=-0.11, enEr_sig=58.23,
-#                        bl_mu=1.48e-9, bl_sig=0.167e-9,
-#                        intens_mu=1.565e11, intens_sig=0.843e11,
-#                        Vrf_mu=6.06, Vrf_sig=1.79,
-#                        mu_mu=2.89, mu_sig=1.11,
-#                        VrfSPS_mu=8.51, VrfSPS_sig=2.02
-#                        ):
-
-def unnormalize_params(phErs_norm, enErs_norm, bls_norm, intens_norm, Vrf_norm,
-                       mu_norm, VrfSPS_norm,
-                       phEr_mu=0, phEr_sig=50,
-                       enEr_mu=0, enEr_sig=100,
-                       bl_mu=1.4e-9, bl_sig=0.2e-9,
-                       intens_mu=1.225e11, intens_sig=0.37e11,
-                       Vrf_mu=6, Vrf_sig=2.2,
-                       mu_mu=2, mu_sig=1,
-                       VrfSPS_mu=8.5, VrfSPS_sig=2.2
+def unnormalize_params(phErs, enErs, bls, intens, Vrf, mu, VrfSPS,
+                       normalization  # can be default std or minmax
                        ):
+    if normalization == 'std':
+        phEr_mu = 0.45
+        phEr_sig = 29.14
+        enEr_mu = -0.11
+        enEr_sig = 58.23
+        bl_mu = 1.48e-9
+        bl_sig = 0.167e-9
+        intens_mu = 1.565e11
+        intens_sig = 0.843e11
+        Vrf_mu = 6.06
+        Vrf_sig = 1.79
+        mu_mu = 2.89
+        mu_sig = 1.11
+        VrfSPS_mu = 8.51
+        VrfSPS_sig = 2.02
+        return unnormalize_param(phErs, phEr_mu, phEr_sig),\
+            unnormalize_param(enErs, enEr_mu, enEr_sig),\
+            unnormalize_param(bls, bl_mu, bl_sig),\
+            unnormalize_param(intens, intens_mu, intens_sig),\
+            unnormalize_param(Vrf, Vrf_mu, Vrf_sig),\
+            unnormalize_param(mu, mu_mu, mu_sig),\
+            unnormalize_param(VrfSPS, VrfSPS_mu, VrfSPS_sig)
+    elif normalization == 'default':
+        phEr_mu = 0
+        phEr_sig = 50
+        enEr_mu = 0
+        enEr_sig = 100
+        bl_mu = 1.4e-9
+        bl_sig = 0.2e-9
+        intens_mu = 1.225e11
+        intens_sig = 0.37e11
+        Vrf_mu = 6
+        Vrf_sig = 2.2
+        mu_mu = 2
+        mu_sig = 1
+        VrfSPS_mu = 8.5
+        VrfSPS_sig = 2.2
+        return unnormalize_param(phErs, phEr_mu, phEr_sig),\
+            unnormalize_param(enErs, enEr_mu, enEr_sig),\
+            unnormalize_param(bls, bl_mu, bl_sig),\
+            unnormalize_param(intens, intens_mu, intens_sig),\
+            unnormalize_param(Vrf, Vrf_mu, Vrf_sig),\
+            unnormalize_param(mu, mu_mu, mu_sig),\
+            unnormalize_param(VrfSPS, VrfSPS_mu, VrfSPS_sig)
 
-    return unnormalize_param(phErs_norm, phEr_mu, phEr_sig),\
-        unnormalize_param(enErs_norm, enEr_mu, enEr_sig),\
-        unnormalize_param(bls_norm, bl_mu, bl_sig),\
-        unnormalize_param(intens_norm, intens_mu, intens_sig),\
-        unnormalize_param(Vrf_norm, Vrf_mu, Vrf_sig),\
-        unnormalize_param(mu_norm, mu_mu, mu_sig),\
-        unnormalize_param(VrfSPS_norm, VrfSPS_mu, VrfSPS_sig)
+    elif normalization == 'minmax':
+        phEr_min = -50.
+        phEr_max = 50.
+        enEr_min = -100.
+        enEr_max = 100.
+        bl_min = 1.2e-9
+        bl_max = 1.8e-9
+        intens_min = 1.0e10
+        intens_max = 3.0e11
+        Vrf_min = 3.
+        Vrf_max = 9.2
+        mu_min = 1.
+        mu_max = 5.
+        VrfSPS_min = 5.
+        VrfSPS_max = 12.0
+        return minmax_unnormalize_param(phErs, phEr_min, phEr_max),\
+            minmax_unnormalize_param(enErs, enEr_min, enEr_max),\
+            minmax_unnormalize_param(bls, bl_min, bl_max),\
+            minmax_unnormalize_param(intens, intens_min, intens_max),\
+            minmax_unnormalize_param(Vrf, Vrf_min, Vrf_max),\
+            minmax_unnormalize_param(mu, mu_min, mu_max),\
+            minmax_unnormalize_param(VrfSPS, VrfSPS_min, VrfSPS_max)
 
 
 def assess_model(model, turn_normalized, T_image, PS_image, epoch=None):

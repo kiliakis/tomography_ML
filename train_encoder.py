@@ -49,7 +49,9 @@ train_cfg = {
     'dropout': 0.2,
     'loss': 'mse',
     'lr': 1e-3,
-    'dataset%': 0.1
+    'dataset%': 0.1,
+    'normalization': 'std'
+
 }
 
 # Keep only a small percentage of the entire dataset
@@ -59,7 +61,7 @@ train_cfg = {
 # cnn_filters = [32]
 
 if __name__ == '__main__':
-    
+
     args = parser.parse_args()
     # If input config file is provided, read input from config file
     input_config_file = args.config
@@ -107,8 +109,8 @@ if __name__ == '__main__':
 
     # create the directory to store the results
     os.makedirs(trial_dir, exist_ok=True)
-    os.makedirs(weights_dir, exist_ok=False)
-    os.makedirs(plots_dir, exist_ok=False)
+    os.makedirs(weights_dir, exist_ok=True)
+    os.makedirs(plots_dir, exist_ok=True)
 
     # Create the datasets
     # First the training data
@@ -118,7 +120,8 @@ if __name__ == '__main__':
     # Shuffle them
     np.random.shuffle(files)
     # read input, divide in features/ label, create tensors
-    x_train, y_train = encoder_files_to_tensors(files)
+    x_train, y_train = encoder_files_to_tensors(files,
+                                                normalization=train_cfg['normalization'])
 
     # Then the validation data
     files = glob.glob(VALIDATION_PATH + '/*.pk')
@@ -127,7 +130,8 @@ if __name__ == '__main__':
     # Shuffle them
     np.random.shuffle(files)
     # read input, divide in features/ label, create tensors
-    x_valid, y_valid = encoder_files_to_tensors(files)
+    x_valid, y_valid = encoder_files_to_tensors(files,
+                                                normalization=train_cfg['normalization'])
 
     # Model instantiation
     input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
@@ -152,8 +156,9 @@ if __name__ == '__main__':
         callbacks=[save_best])
 
     total_time = time.time() - start_time
-    print(f'\n---- Training complete, epochs: {len(history.history["loss"])}, total time {total_time} ----\n')
-    
+    print(
+        f'\n---- Training complete, epochs: {len(history.history["loss"])}, total time {total_time} ----\n')
+
     # Plot training and validation loss
     print('\n---- Plotting loss ----\n')
 
@@ -185,4 +190,3 @@ if __name__ == '__main__':
     # save config_dict
     with open(os.path.join(trial_dir, 'encoder-summary.yml'), 'w') as configfile:
         yaml.dump(config_dict, configfile, default_flow_style=False)
-
