@@ -46,7 +46,7 @@ def extract_trials(indir):
                     date]
                 rows.append(row)
     
-    rows = sorted(rows, key=lambda a: (a[0], a[1]))
+    rows = sorted(rows, key=lambda a: (a[0], float(a[1])))
     return header, rows
 
 if __name__ == '__main__':

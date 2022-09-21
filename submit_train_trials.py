@@ -7,7 +7,7 @@ import argparse
 
 submission_system = 'condor'
 USERNAME = 'kiliakis'
-RUNTIME = 1          # in hours
+RUNTIME = 2          # in hours
 USE_GPU = 1          # request for a gpu node
 CPU_CORES = 1        # number of CPU cores
 if submission_system == 'condor':
@@ -68,60 +68,47 @@ configs = [
     # },
     {
         'decoder': {
-            'epochs': 50,
+            'epochs': 100,
             'dense_layers': [8, 512],
             'filters': [256, 64, 32, 1],
             'kernel_size': 3, 
             'strides': [2, 2],
             'final_kernel_size': 3,
             'activation': 'relu',
-            'dropout': 0.1,
+            'dropout': 0.0,
             'loss': 'mse', 'lr': 1e-3,
             'dataset%': 1.0
         },
     },
     {
         'decoder': {
-            'epochs': 50,
-            'dense_layers': [8, 1024],
+            'epochs': 100,
+            'dense_layers': [8, 512],
             'filters': [256, 64, 32, 1],
             'kernel_size': 3,
             'strides': [2, 2],
             'final_kernel_size': 3,
             'activation': 'relu',
-            'dropout': 0.1,
-            'loss': 'mse', 'lr': 1e-3,
+            'dropout': 0.0,
+            'loss': 'mse', 'lr': 2e-3,
             'dataset%': 1.0
         },
     },
     {
         'decoder': {
-            'epochs': 50,
-            'dense_layers': [8, 1024],
-            'filters': [256, 64, 1],
+            'epochs': 100,
+            'dense_layers': [8, 512],
+            'filters': [256, 64, 32, 1],
             'kernel_size': 3,
             'strides': [2, 2],
             'final_kernel_size': 3,
             'activation': 'relu',
-            'dropout': 0.1,
-            'loss': 'mse', 'lr': 1e-3,
+            'dropout': 0.0,
+            'loss': 'mse', 'lr': 5e-3,
             'dataset%': 1.0
         },
     },
-    {
-        'decoder': {
-            'epochs': 50,
-            'dense_layers': [8, 1024],
-            'filters': [128, 64, 32, 1],
-            'kernel_size': 3,
-            'strides': [2, 2],
-            'final_kernel_size': 3,
-            'activation': 'relu',
-            'dropout': 0.1,
-            'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 1.0
-        },
-    },
+
 
 ]
 

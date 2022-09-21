@@ -130,7 +130,7 @@ if __name__ == '__main__':
     # callbacks, save the best model, and early stop if no improvement in val_loss
     stop_early = keras.callbacks.EarlyStopping(monitor='val_loss',
                                                patience=10, restore_best_weights=True)
-    save_best = keras.callbacks.ModelCheckpoint(filepath=os.path.join(weights_dir, 'decoder'),
+    save_best = keras.callbacks.ModelCheckpoint(filepath=os.path.join(weights_dir, 'decoder.h5'),
                                                 monitor='val_loss', save_best_only=True)
 
     start_time = time.time()
