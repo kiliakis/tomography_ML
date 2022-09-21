@@ -19,6 +19,10 @@ parser.add_argument('-c', '--columns', nargs='+', type=int, default=[],
                     help='Which columns to show in stdout.'
                     ' Default: all columns')
 
+parser.add_argument('-r', '--rows', type=int, default=-1,
+                    help='How many rows to show in stdout.'
+                    ' Default: all rows')
+
 def extract_trials(indir):
     header = ['model', 'vld_ls', 'trn_ls', 'epoch', 'data',
               'filters', 'kernels', 'dense', 'activ', 'dropout', 
@@ -77,9 +81,17 @@ if __name__ == '__main__':
         if 'dec' in r[0]:
             r = [r[i] for i in idx]
             decode_t.add_row(r)
-    print(encode_t)
+    
+    if args.rows > 0:
+        print(encode_t[:args.rows])
+    else:
+        print(encode_t)
+
     print()
-    print(decode_t)
+    if args.rows > 0:
+        print(decode_t[:args.rows])
+    else:
+        print(decode_t)
 
     if os.path.isfile(args.outfile):
         # if file exists, I open and append to it
