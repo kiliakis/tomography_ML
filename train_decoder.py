@@ -95,8 +95,8 @@ if __name__ == '__main__':
 
     # create the directory to store the results
     os.makedirs(trial_dir, exist_ok=True)
-    os.makedirs(weights_dir, exist_ok=False)
-    os.makedirs(plots_dir, exist_ok=False)
+    os.makedirs(weights_dir, exist_ok=True)
+    os.makedirs(plots_dir, exist_ok=True)
 
     # Create the datasets
     # First the training data
