@@ -1,4 +1,5 @@
 # GENERATE ML DATA
+from genericpath import exists
 import os
 import numpy as np
 import pickle as pk
@@ -93,11 +94,13 @@ if __name__ == '__main__':
                            'B_img': PS_img_dec}
 
             for turn in [0]+random.choices(normSimDict['turns'][1:], k=num_Turns_Case):
+                tenK = os.path.join(SAVE_PATH, f'{int(i % 10000)}K')
+                os.path.makedirs(tenK, exist_ok=True)
                 pk.dump({'turn': turn,
                         'T_img': normSimDict['T_img'],
                          'params': normSimDict['params'],
                          'fn': normSimDict['fn'],
                          'PS': normSimDict['B_img'][:, :, turn//skipturns]},
-                        open(os.path.join(SAVE_PATH, "{:05d}.pk".format(i)), "wb"))
+                        open(os.path.join(tenK, "{:06d}.pk".format(i)), "wb"))
             
-            i += 1
+                i += 1
