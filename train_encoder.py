@@ -1,8 +1,8 @@
 # Train the ML model
 
 from models import Encoder
-# from utils import load_model_data_new, normalize_params
-from utils import plot_loss, encoder_files_to_tensors
+from utils import sample_files
+from utils import plot_loss, load_encoder_data
 import time
 import glob
 import tensorflow as tf
@@ -23,12 +23,13 @@ parser.add_argument('-c', '--config', type=str, default=None,
                     help='A yaml configuration file with all training parameters.')
 
 # Initialize parameters
-data_dir = '/eos/user/k/kiliakis/tomo_data/datasets'
+# data_dir = '/eos/user/k/kiliakis/tomo_data/datasets'
+data_dir = '/eos/kiliakis/tomo_data/datasets'
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
 IMG_OUTPUT_SIZE = 128
-BUFFER_SIZE = 6667      # this number should be ideally as large as the data
+# BUFFER_SIZE = 6667      # this number should be ideally as large as the data
 BATCH_SIZE = 32  # 8
 latent_dim = 7  # 6 + the new VrfSPS
 # additional_latent_dim = 1
@@ -114,24 +115,31 @@ if __name__ == '__main__':
 
     # Create the datasets
     # First the training data
-    files = glob.glob(TRAINING_PATH + '/*.pk')
-    files = files[:int(len(files) * train_cfg['dataset%'])]
+    file_names = sample_files(TRAINING_PATH, train_cfg['dataset%'])
+    print('Training files: ', len(file_names))
+    # convert to dataset
+    train_dataset = tf.data.Dataset.from_tensor_slices(file_names)
+    # Then map function to dataset
+    # this returns pairs of tensors with shape (128, 128, 1) and (7,)
+    train_dataset = train_dataset.map(lambda x: tf.py_function(
+        load_encoder_data,
+        [x, train_cfg['normalization'], True],
+        [tf.float32, tf.float32]))
+    # batch the dataset
+    train_dataset = train_dataset.batch(BATCH_SIZE)
 
-    # Shuffle them
-    np.random.shuffle(files)
-    # read input, divide in features/ label, create tensors
-    x_train, y_train = encoder_files_to_tensors(files,
-                                                normalization=train_cfg['normalization'])
-
-    # Then the validation data
-    files = glob.glob(VALIDATION_PATH + '/*.pk')
-    files = files[:int(len(files) * train_cfg['dataset%'])]
-
-    # Shuffle them
-    np.random.shuffle(files)
-    # read input, divide in features/ label, create tensors
-    x_valid, y_valid = encoder_files_to_tensors(files,
-                                                normalization=train_cfg['normalization'])
+    file_names = sample_files(VALIDATION_PATH, train_cfg['dataset%'])
+    print('Validation files: ', len(file_names))
+    # convert to dataset
+    valid_dataset = tf.data.Dataset.from_tensor_slices(file_names)
+    # Then map function to dataset
+    # this returns pairs of tensors with shape (128, 128, 1) and (7,)
+    valid_dataset = valid_dataset.map(lambda x: tf.py_function(
+        load_encoder_data,
+        [x, train_cfg['normalization'], True],
+        [tf.float32, tf.float32]))
+    # batch the dataset
+    valid_dataset = valid_dataset.batch(BATCH_SIZE)
 
     # Model instantiation
     input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
@@ -151,8 +159,8 @@ if __name__ == '__main__':
 
     start_time = time.time()
     history = encoder.model.fit(
-        x_train, y_train, epochs=train_cfg['epochs'],
-        validation_data=(x_valid, y_valid), batch_size=BATCH_SIZE,
+        train_dataset, epochs=train_cfg['epochs'],
+        validation_data=valid_dataset,
         callbacks=[save_best])
 
     total_time = time.time() - start_time

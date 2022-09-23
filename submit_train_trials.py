@@ -7,7 +7,7 @@ import argparse
 
 submission_system = 'condor'
 USERNAME = 'kiliakis'
-RUNTIME = 2          # in hours
+RUNTIME = 4          # in hours
 USE_GPU = 1          # request for a gpu node
 CPU_CORES = 1        # number of CPU cores
 if submission_system == 'condor':
@@ -23,8 +23,8 @@ TRIALS_DIR = os.path.join(PROJECT_DIR, 'trials')
 configs = [
     {
         'encoder': {
-            'epochs': 100,
-            'dense_layers': [512, 7],
+            'epochs': 30,
+            'dense_layers': [256, 7],
             'filters': [32, 64, 128, 256],
             'cropping': [0, 0],
             'kernel_size': 3, 'strides': [1, 1],
@@ -39,8 +39,8 @@ configs = [
     },
     {
         'encoder': {
-            'epochs': 100,
-            'dense_layers': [512, 7],
+            'epochs': 30,
+            'dense_layers': [256, 7],
             'filters': [32, 64, 128, 256],
             'cropping': [0, 0],
             'kernel_size': 3, 'strides': [1, 1],
@@ -50,7 +50,7 @@ configs = [
             'dropout': 0.05,
             'loss': 'mse', 'lr': 1e-3,
             'dataset%': 0.1,
-            'normalization': 'minmax'
+            'normalization': 'std'
 
         },
     },
