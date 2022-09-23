@@ -7,6 +7,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import re
+import glob
 
 
 def plot_loss(lines, title='', figname=None):
@@ -108,6 +109,20 @@ def read_pk(fname):
     except pk.UnpicklingError as e:
         print(f'Skipping file {fname}, ', e)
     return data['turn'], data['T_img'], data['PS'], data['fn'], data['params']
+
+# Returns a random sample of percent filenames from input path
+def sample_files(path, percent):
+    ret_files = []
+    dirs = glob.glob(path + '/*x10K')
+
+    for dir in dirs:
+        files = os.listdir(dir)
+        sample = np.random.choice(files, int(percent * len(files)),
+                                replace=False)
+        sample = [os.path.join(dir, f) for f in sample]
+        ret_files += sample
+    np.random.shuffle(ret_files)
+    return ret_files
 
 
 def normalizeIMG(img, maxPixel=1):
