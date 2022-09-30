@@ -29,7 +29,7 @@ timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 # Data specific
 IMG_OUTPUT_SIZE = 128
 BUFFER_SIZE = 6667 # number of sim data
-BATCH_SIZE = 32  # 8
+BATCH_SIZE = 128  # 8
 latent_dim = 7  # 6 + the new VrfSPS
 additional_latent_dim = 1
 

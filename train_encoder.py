@@ -29,10 +29,8 @@ timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
 IMG_OUTPUT_SIZE = 128
-# BUFFER_SIZE = 6667      # this number should be ideally as large as the data
 BATCH_SIZE = 128  # 8
 latent_dim = 7  # 6 + the new VrfSPS
-# additional_latent_dim = 1
 
 # Train specific
 train_cfg = {
@@ -54,12 +52,6 @@ train_cfg = {
     'normalization': 'std'
 
 }
-
-# Keep only a small percentage of the entire dataset
-# for faster testing.
-# dataset_keep_percent = 0.1
-# cnn_filters = [32, 64, 128, 256, 512, 1024]
-# cnn_filters = [32]
 
 if __name__ == '__main__':
 
@@ -127,7 +119,7 @@ if __name__ == '__main__':
         [x, train_cfg['normalization'], True],
         [tf.float32, tf.float32]))
     # cache the dataset
-    train_dataset = train_dataset.cache(os.path.join(trial_dir, 'train_cache.dat'))
+    train_dataset = train_dataset.cache(os.path.join(trial_dir, 'train_cache'))
     # batch the dataset
     train_dataset = train_dataset.batch(BATCH_SIZE)
 
@@ -142,7 +134,7 @@ if __name__ == '__main__':
         [x, train_cfg['normalization'], True],
         [tf.float32, tf.float32]))
     # cache the dataset
-    valid_dataset = valid_dataset.cache(os.path.join(trial_dir, 'valid_cache.dat'))
+    valid_dataset = valid_dataset.cache(os.path.join(trial_dir, 'valid_cache'))
     # batch the dataset
     valid_dataset = valid_dataset.batch(BATCH_SIZE)
     
@@ -189,10 +181,6 @@ if __name__ == '__main__':
               title='Encoder Train/Validation Loss',
               figname=os.path.join(plots_dir, 'encoder_train_valid_loss.png'))
 
-    # Save the best model's weights
-    # eCED.encoder = best_encoder
-    # eCED.encoder.save_weights(os.path.join(
-    #     weights_dir, 'eCED_weights_encoder.h5'), save_format='h5')
 
     print('\n---- Saving a summary ----\n')
 
