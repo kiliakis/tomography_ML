@@ -9,6 +9,7 @@ import tensorflow as tf
 from tensorflow import keras
 import yaml
 import os
+import shutil
 import numpy as np
 from datetime import datetime
 import argparse
@@ -30,6 +31,7 @@ timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 # Data specific
 IMG_OUTPUT_SIZE = 128
 BATCH_SIZE = 128  # 8
+BUFFER_SIZE = 32768
 latent_dim = 7  # 6 + the new VrfSPS
 
 # Train specific
@@ -66,11 +68,16 @@ if __name__ == '__main__':
         # cnn_filters = input_config['cnn_filters']
         # dataset_keep_percent = input_config['dataset_keep_percent']
         timestamp = input_config['timestamp']
+    
+    print('Configuration:')
+    for k, v in train_cfg.items():
+        print(k, v)
 
     # Initialize directories
     trial_dir = os.path.join('./trials/', timestamp)
     weights_dir = os.path.join(trial_dir, 'weights')
     plots_dir = os.path.join(trial_dir, 'plots')
+    cache_dir = os.path.join(trial_dir, 'cache')
 
     print('\n---- Using directory: ', trial_dir, ' ----\n')
 
@@ -104,97 +111,109 @@ if __name__ == '__main__':
     os.makedirs(trial_dir, exist_ok=True)
     os.makedirs(weights_dir, exist_ok=True)
     os.makedirs(plots_dir, exist_ok=True)
-    
-    start_t = time.time()
-    # Create the datasets
-    # First the training data
-    file_names = sample_files(TRAINING_PATH, train_cfg['dataset%'])
-    print('Training files: ', len(file_names))
-    # convert to dataset
-    train_dataset = tf.data.Dataset.from_tensor_slices(file_names)
-    # Then map function to dataset
-    # this returns pairs of tensors with shape (128, 128, 1) and (7,)
-    train_dataset = train_dataset.map(lambda x: tf.py_function(
-        load_encoder_data,
-        [x, train_cfg['normalization'], True],
-        [tf.float32, tf.float32]))
-    # cache the dataset
-    train_dataset = train_dataset.cache(os.path.join(trial_dir, 'train_cache'))
-    # batch the dataset
-    train_dataset = train_dataset.batch(BATCH_SIZE)
+    os.makedirs(cache_dir, exist_ok=True)
+    try:
+        start_t = time.time()
+        # Create the datasets
+        # First the training data
+        file_names = sample_files(TRAINING_PATH, train_cfg['dataset%'])
+        print('Training files: ', len(file_names))
+        # convert to dataset
+        train_dataset = tf.data.Dataset.from_tensor_slices(file_names)
+        # Then map function to dataset
+        # this returns pairs of tensors with shape (128, 128, 1) and (7,)
+        train_dataset = train_dataset.map(lambda x: tf.py_function(
+            load_encoder_data,
+            [x, train_cfg['normalization'], True],
+            [tf.float32, tf.float32]))
+        # cache the dataset
+        train_dataset = train_dataset.cache(
+            os.path.join(cache_dir, 'train_cache'))
+        # shuffle the dataset
+        train_dataset = train_dataset.shuffle(BUFFER_SIZE, seed=1)
+        # batch the dataset
+        train_dataset = train_dataset.batch(BATCH_SIZE)
 
-    file_names = sample_files(VALIDATION_PATH, train_cfg['dataset%'])
-    print('Validation files: ', len(file_names))
-    # convert to dataset
-    valid_dataset = tf.data.Dataset.from_tensor_slices(file_names)
-    # Then map function to dataset
-    # this returns pairs of tensors with shape (128, 128, 1) and (7,)
-    valid_dataset = valid_dataset.map(lambda x: tf.py_function(
-        load_encoder_data,
-        [x, train_cfg['normalization'], True],
-        [tf.float32, tf.float32]))
-    # cache the dataset
-    valid_dataset = valid_dataset.cache(os.path.join(trial_dir, 'valid_cache'))
-    # batch the dataset
-    valid_dataset = valid_dataset.batch(BATCH_SIZE)
-    
-    end_t = time.time()
-    print(f'\n---- Input files have been read, elapsed: {end_t - start_t} ----\n')
-    
-    start_t = time.time()
-    # Model instantiation
-    input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
+        file_names = sample_files(VALIDATION_PATH, train_cfg['dataset%'])
+        print('Validation files: ', len(file_names))
+        # convert to dataset
+        valid_dataset = tf.data.Dataset.from_tensor_slices(file_names)
+        # Then map function to dataset
+        # this returns pairs of tensors with shape (128, 128, 1) and (7,)
+        valid_dataset = valid_dataset.map(lambda x: tf.py_function(
+            load_encoder_data,
+            [x, train_cfg['normalization'], True],
+            [tf.float32, tf.float32]))
+        # cache the dataset
+        valid_dataset = valid_dataset.cache(
+            os.path.join(cache_dir, 'valid_cache'))
+        # shuffle the dataset
+        valid_dataset = valid_dataset.shuffle(BUFFER_SIZE, seed=1)
+        # batch the dataset
+        valid_dataset = valid_dataset.batch(BATCH_SIZE)
 
-    encoder = Encoder(input_shape=input_shape, **train_cfg)
+        end_t = time.time()
+        print(
+            f'\n---- Input files have been read, elapsed: {end_t - start_t} ----\n')
 
-    print(encoder.model.summary())
-    end_t = time.time()
-    
-    print(f'\n---- Model has been initialized, elapsed: {end_t - start_t} ----\n')
+        start_t = time.time()
+        # Model instantiation
+        input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
 
-    # Train the encoder
-    print('\n---- Training the encoder ----\n')
+        encoder = Encoder(input_shape=input_shape, **train_cfg)
 
-    # callbacks, save the best model, and early stop if no improvement in val_loss
-    stop_early = keras.callbacks.EarlyStopping(monitor='val_loss',
-                                               patience=5, restore_best_weights=True)
-    save_best = keras.callbacks.ModelCheckpoint(filepath=os.path.join(weights_dir, 'encoder.h5'),
-                                                monitor='val_loss', save_best_only=True)
+        print(encoder.model.summary())
+        end_t = time.time()
 
-    start_time = time.time()
-    history = encoder.model.fit(
-        train_dataset, epochs=train_cfg['epochs'],
-        validation_data=valid_dataset,
-        callbacks=[stop_early, save_best])
+        print(
+            f'\n---- Model has been initialized, elapsed: {end_t - start_t} ----\n')
 
-    total_time = time.time() - start_time
-    print(
-        f'\n---- Training complete, epochs: {len(history.history["loss"])}, total time {total_time} ----\n')
+        # Train the encoder
+        print('\n---- Training the encoder ----\n')
 
-    # Plot training and validation loss
-    print('\n---- Plotting loss ----\n')
+        # callbacks, save the best model, and early stop if no improvement in val_loss
+        stop_early = keras.callbacks.EarlyStopping(monitor='val_loss',
+                                                   patience=5, restore_best_weights=True)
+        save_best = keras.callbacks.ModelCheckpoint(filepath=os.path.join(weights_dir, 'encoder.h5'),
+                                                    monitor='val_loss', save_best_only=True)
 
-    train_loss_l = np.array(history.history['loss'])
-    valid_loss_l = np.array(history.history['val_loss'])
+        start_time = time.time()
+        history = encoder.model.fit(
+            train_dataset, epochs=train_cfg['epochs'],
+            validation_data=valid_dataset,
+            callbacks=[stop_early, save_best])
 
-    plot_loss({'Training': train_loss_l, 'Validation': valid_loss_l},
-              title='Encoder Train/Validation Loss',
-              figname=os.path.join(plots_dir, 'encoder_train_valid_loss.png'))
+        total_time = time.time() - start_time
+        print(
+            f'\n---- Training complete, epochs: {len(history.history["loss"])}, total time {total_time} ----\n')
 
+        # Plot training and validation loss
+        print('\n---- Plotting loss ----\n')
 
-    print('\n---- Saving a summary ----\n')
+        train_loss_l = np.array(history.history['loss'])
+        valid_loss_l = np.array(history.history['val_loss'])
 
-    # save file with experiment configuration
-    config_dict = {}
-    config_dict['encoder'] = train_cfg.copy()
-    config_dict['encoder'].update({
-        'epochs': len(history.history["loss"]),
-        'min_train_loss': float(np.min(train_loss_l)),
-        'min_valid_loss': float(np.min(valid_loss_l)),
-        'total_train_time': total_time,
-        'used_gpus': len(gpus)
-    })
+        plot_loss({'Training': train_loss_l, 'Validation': valid_loss_l},
+                  title='Encoder Train/Validation Loss',
+                  figname=os.path.join(plots_dir, 'encoder_train_valid_loss.png'))
 
-    # save config_dict
-    with open(os.path.join(trial_dir, 'encoder-summary.yml'), 'w') as configfile:
-        yaml.dump(config_dict, configfile, default_flow_style=False)
+        print('\n---- Saving a summary ----\n')
+
+        # save file with experiment configuration
+        config_dict = {}
+        config_dict['encoder'] = train_cfg.copy()
+        config_dict['encoder'].update({
+            'epochs': len(history.history["loss"]),
+            'min_train_loss': float(np.min(train_loss_l)),
+            'min_valid_loss': float(np.min(valid_loss_l)),
+            'total_train_time': total_time,
+            'used_gpus': len(gpus)
+        })
+
+        # save config_dict
+        with open(os.path.join(trial_dir, 'encoder-summary.yml'), 'w') as configfile:
+            yaml.dump(config_dict, configfile, default_flow_style=False)
+
+    finally:
+        if os.path.exists(cache_dir):
+            shutil.rmtree(cache_dir)

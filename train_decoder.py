@@ -5,6 +5,7 @@ from utils import sample_files
 from utils import plot_loss, decoder_files_to_tensors, load_decoder_data
 import time
 import glob
+import shutil
 import tensorflow as tf
 from tensorflow import keras
 import yaml
@@ -28,8 +29,8 @@ timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
 IMG_OUTPUT_SIZE = 128
-BUFFER_SIZE = 6667 # number of sim data
 BATCH_SIZE = 128  # 8
+BUFFER_SIZE = 32768
 latent_dim = 7  # 6 + the new VrfSPS
 additional_latent_dim = 1
 
@@ -60,10 +61,15 @@ if __name__ == '__main__':
         train_cfg = input_config['decoder']
         timestamp = input_config['timestamp']
 
+    print('\n---- Configuration: ----\n')
+    for k, v in train_cfg.items():
+        print(k, v)
+
     # Initialize directories
     trial_dir = os.path.join('./trials/', timestamp)
     weights_dir = os.path.join(trial_dir, 'weights')
     plots_dir = os.path.join(trial_dir, 'plots')
+    cache_dir = os.path.join(trial_dir, 'cache')
 
     print('\n---- Using directory: ', trial_dir, ' ----\n')
 
@@ -97,85 +103,109 @@ if __name__ == '__main__':
     os.makedirs(trial_dir, exist_ok=True)
     os.makedirs(weights_dir, exist_ok=True)
     os.makedirs(plots_dir, exist_ok=True)
+    os.makedirs(cache_dir, exist_ok=True)
 
-    # Create the datasets
-    # First the training data
-    file_names = sample_files(TRAINING_PATH, train_cfg['dataset%'])
-    print('Training files: ', len(file_names))
-    # convert to dataset
-    train_dataset = tf.data.Dataset.from_tensor_slices(file_names)
-    # Then map function to dataset
-    # this returns pairs of tensors with shape (128, 128, 1) and (8,)
-    train_dataset = train_dataset.map(lambda x: tf.py_function(
-        load_decoder_data,
-        [x, train_cfg['normalization']],
-        [tf.float32, tf.float32]))
-    # batch the dataset
-    train_dataset = train_dataset.batch(BATCH_SIZE)
+    try:
+        start_t = time.time()
+        # Create the datasets
+        # First the training data
+        file_names = sample_files(TRAINING_PATH, train_cfg['dataset%'])
+        print('Training files: ', len(file_names))
+        # convert to dataset
+        train_dataset = tf.data.Dataset.from_tensor_slices(file_names)
+        # Then map function to dataset
+        # this returns pairs of tensors with shape (128, 128, 1) and (8,)
+        train_dataset = train_dataset.map(lambda x: tf.py_function(
+            load_decoder_data,
+            [x, train_cfg['normalization']],
+            [tf.float32, tf.float32]))
 
-    file_names = sample_files(VALIDATION_PATH, train_cfg['dataset%'])
-    print('Validation files: ', len(file_names))
-    # convert to dataset
-    valid_dataset = tf.data.Dataset.from_tensor_slices(file_names)
-    # Then map function to dataset
-    # this returns pairs of tensors with shape (128, 128, 1) and (8,)
-    valid_dataset = valid_dataset.map(lambda x: tf.py_function(
-        load_decoder_data,
-        [x, train_cfg['normalization']],
-        [tf.float32, tf.float32]))
-    # batch the dataset
-    valid_dataset = valid_dataset.batch(BATCH_SIZE)
+        # cache the dataset
+        train_dataset = train_dataset.cache(
+            os.path.join(cache_dir, 'train_cache'))
+        # shuffle the dataset
+        train_dataset = train_dataset.shuffle(BUFFER_SIZE, seed=1)
+        # batch the dataset
+        train_dataset = train_dataset.batch(BATCH_SIZE)
 
-    # Model instantiation
-    input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
+        file_names = sample_files(VALIDATION_PATH, train_cfg['dataset%'])
+        print('Validation files: ', len(file_names))
+        # convert to dataset
+        valid_dataset = tf.data.Dataset.from_tensor_slices(file_names)
+        # Then map function to dataset
+        # this returns pairs of tensors with shape (128, 128, 1) and (8,)
+        valid_dataset = valid_dataset.map(lambda x: tf.py_function(
+            load_decoder_data,
+            [x, train_cfg['normalization']],
+            [tf.float32, tf.float32]))
+        # cache the dataset
+        valid_dataset = valid_dataset.cache(
+            os.path.join(cache_dir, 'valid_cache'))
+        # shuffle the dataset
+        valid_dataset = valid_dataset.shuffle(BUFFER_SIZE, seed=1)
+        # batch the dataset
+        valid_dataset = valid_dataset.batch(BATCH_SIZE)
 
-    decoder = Decoder(input_shape, **train_cfg)
+        end_t = time.time()
+        print(
+            f'\n---- Input files have been read, elapsed: {end_t - start_t} ----\n')
 
-    print(decoder.model.summary())
+        start_t = time.time()
+        # Model instantiation
+        input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
 
+        decoder = Decoder(input_shape, **train_cfg)
 
-    print('\n---- Training the decoder ----\n')
+        print(decoder.model.summary())
+        end_t = time.time()
+        print(
+            f'\n---- Model has been initialized, elapsed: {end_t - start_t} ----\n')
 
-    # callbacks, save the best model, and early stop if no improvement in val_loss
-    stop_early = keras.callbacks.EarlyStopping(monitor='val_loss',
-                                               patience=10, restore_best_weights=True)
-    save_best = keras.callbacks.ModelCheckpoint(filepath=os.path.join(weights_dir, 'decoder.h5'),
-                                                monitor='val_loss', save_best_only=True)
+        print('\n---- Training the decoder ----\n')
 
-    start_time = time.time()
-    history = decoder.model.fit(
-        train_dataset, epochs=train_cfg['epochs'],
-        validation_data=valid_dataset,
-        callbacks=[stop_early, save_best])
+        # callbacks, save the best model, and early stop if no improvement in val_loss
+        stop_early = keras.callbacks.EarlyStopping(monitor='val_loss',
+                                                   patience=5, restore_best_weights=True)
+        save_best = keras.callbacks.ModelCheckpoint(filepath=os.path.join(weights_dir, 'decoder.h5'),
+                                                    monitor='val_loss', save_best_only=True)
 
-    total_time = time.time() - start_time
-    print(
-        f'\n---- Training complete, epochs: {len(history.history["loss"])}, total time {total_time} ----\n')
+        start_time = time.time()
+        history = decoder.model.fit(
+            train_dataset, epochs=train_cfg['epochs'],
+            validation_data=valid_dataset,
+            callbacks=[stop_early, save_best])
 
-    # Plot training and validation loss
-    print('\n---- Plotting loss ----\n')
+        total_time = time.time() - start_time
+        print(
+            f'\n---- Training complete, epochs: {len(history.history["loss"])}, total time {total_time} ----\n')
 
-    train_loss_l = np.array(history.history['loss'])
-    valid_loss_l = np.array(history.history['val_loss'])
+        # Plot training and validation loss
+        print('\n---- Plotting loss ----\n')
 
-    plot_loss({'Training': train_loss_l, 'Validation': valid_loss_l},
-              title='decoder Train/Validation Loss',
-              figname=os.path.join(plots_dir, 'decoder_train_valid_loss.png'))
+        train_loss_l = np.array(history.history['loss'])
+        valid_loss_l = np.array(history.history['val_loss'])
 
-    # save file with experiment configuration
-    print('\n---- Saving a summary ----\n')
+        plot_loss({'Training': train_loss_l, 'Validation': valid_loss_l},
+                  title='decoder Train/Validation Loss',
+                  figname=os.path.join(plots_dir, 'decoder_train_valid_loss.png'))
 
-    config_dict = {}
-    config_dict['decoder'] = train_cfg.copy()
+        # save file with experiment configuration
+        print('\n---- Saving a summary ----\n')
 
-    config_dict['decoder'].update({
-        'epochs': len(history.history["loss"]),
-        'min_train_loss': float(np.min(train_loss_l)),
-        'min_valid_loss': float(np.min(valid_loss_l)),
-        'total_train_time': total_time,
-        'used_gpus': len(gpus)
-    })
+        config_dict = {}
+        config_dict['decoder'] = train_cfg.copy()
 
-    # save config_dict
-    with open(os.path.join(trial_dir, 'decoder-summary.yml'), 'w') as configfile:
-        yaml.dump(config_dict, configfile, default_flow_style=False)
+        config_dict['decoder'].update({
+            'epochs': len(history.history["loss"]),
+            'min_train_loss': float(np.min(train_loss_l)),
+            'min_valid_loss': float(np.min(valid_loss_l)),
+            'total_train_time': total_time,
+            'used_gpus': len(gpus)
+        })
+
+        # save config_dict
+        with open(os.path.join(trial_dir, 'decoder-summary.yml'), 'w') as configfile:
+            yaml.dump(config_dict, configfile, default_flow_style=False)
+    finally:
+        if os.path.exists(cache_dir):
+            shutil.rmtree(cache_dir)
