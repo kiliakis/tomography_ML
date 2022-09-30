@@ -106,7 +106,7 @@ def extract_data_Fromfolder(fn, simulations_dir, IMG_OUTPUT_SIZE, zeropad, start
 def read_pk(fname):
     try:
         data = pk.loads(tf.io.decode_raw(tf.io.read_file(fname), tf.uint8))
-    except pk.UnpicklingError as e:
+    except Exception as e:
         print(f'Skipping file {fname}, ', e)
     return data['turn'], data['T_img'], data['PS'], data['fn'], data['params']
 

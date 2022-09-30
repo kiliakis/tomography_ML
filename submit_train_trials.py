@@ -7,9 +7,9 @@ import argparse
 
 submission_system = 'condor'
 USERNAME = 'kiliakis'
-RUNTIME = 4          # in hours
-USE_GPU = 1          # request for a gpu node
-CPU_CORES = 1        # number of CPU cores
+RUNTIME = 8          # in hours
+USE_GPU = 0          # request for a gpu node
+CPU_CORES = 8        # number of CPU cores
 if submission_system == 'condor':
     WORK = f"/afs/cern.ch/work/{USERNAME[0]}/{USERNAME}"
     PROJECT_DIR = f"{WORK}/git/tomography_ML"
@@ -23,11 +23,27 @@ TRIALS_DIR = os.path.join(PROJECT_DIR, 'trials')
 configs = [
     {
         'encoder': {
-            'epochs': 30,
-            'dense_layers': [256, 7],
+            'epochs': 20,
+            'dense_layers': [64, 7],
             'filters': [32, 64, 128, 256],
             'cropping': [0, 0],
-            'kernel_size': 3, 'strides': [1, 1],
+            'kernel_size': 3, 'strides': [2, 2],
+            'activation': 'relu',
+            'pooling': None, 'pooling_size': [2, 2],
+            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+            'dropout': 0.1,
+            'loss': 'mse', 'lr': 1e-3,
+            'dataset%': 0.05,
+            'normalization': 'minmax'
+        },
+    },
+    {
+        'encoder': {
+            'epochs': 20,
+            'dense_layers': [7],
+            'filters': [32, 64, 128, 256],
+            'cropping': [0, 0],
+            'kernel_size': 3, 'strides': [2, 2],
             'activation': 'relu',
             'pooling': None, 'pooling_size': [2, 2],
             'pooling_strides': [1, 1], 'pooling_padding': 'valid',
@@ -37,24 +53,7 @@ configs = [
             'normalization': 'minmax'
         },
     },
-    {
-        'encoder': {
-            'epochs': 30,
-            'dense_layers': [256, 7],
-            'filters': [32, 64, 128, 256],
-            'cropping': [0, 0],
-            'kernel_size': 3, 'strides': [1, 1],
-            'activation': 'relu',
-            'pooling': None, 'pooling_size': [2, 2],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-            'dropout': 0.05,
-            'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 0.1,
-            'normalization': 'std'
-
-        },
-    },
-    # {
+   # {
     #     'decoder': {
     #         'epochs': 100,
     #         'dense_layers': [8, 512],

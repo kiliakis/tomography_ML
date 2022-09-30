@@ -23,14 +23,14 @@ parser.add_argument('-c', '--config', type=str, default=None,
                     help='A yaml configuration file with all training parameters.')
 
 # Initialize parameters
-# data_dir = '/eos/user/k/kiliakis/tomo_data/datasets'
-data_dir = '/eos/kiliakis/tomo_data/datasets'
+data_dir = '/eos/user/k/kiliakis/tomo_data/datasets'
+#data_dir = '/eos/kiliakis/tomo_data/datasets'
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
 IMG_OUTPUT_SIZE = 128
 # BUFFER_SIZE = 6667      # this number should be ideally as large as the data
-BATCH_SIZE = 32  # 8
+BATCH_SIZE = 128  # 8
 latent_dim = 7  # 6 + the new VrfSPS
 # additional_latent_dim = 1
 
@@ -112,7 +112,8 @@ if __name__ == '__main__':
     os.makedirs(trial_dir, exist_ok=True)
     os.makedirs(weights_dir, exist_ok=True)
     os.makedirs(plots_dir, exist_ok=True)
-
+    
+    start_t = time.time()
     # Create the datasets
     # First the training data
     file_names = sample_files(TRAINING_PATH, train_cfg['dataset%'])
@@ -125,6 +126,8 @@ if __name__ == '__main__':
         load_encoder_data,
         [x, train_cfg['normalization'], True],
         [tf.float32, tf.float32]))
+    # cache the dataset
+    train_dataset = train_dataset.cache(os.path.join(trial_dir, 'train_cache.dat'))
     # batch the dataset
     train_dataset = train_dataset.batch(BATCH_SIZE)
 
@@ -138,22 +141,31 @@ if __name__ == '__main__':
         load_encoder_data,
         [x, train_cfg['normalization'], True],
         [tf.float32, tf.float32]))
+    # cache the dataset
+    valid_dataset = valid_dataset.cache(os.path.join(trial_dir, 'valid_cache.dat'))
     # batch the dataset
     valid_dataset = valid_dataset.batch(BATCH_SIZE)
-
+    
+    end_t = time.time()
+    print(f'\n---- Input files have been read, elapsed: {end_t - start_t} ----\n')
+    
+    start_t = time.time()
     # Model instantiation
     input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
 
     encoder = Encoder(input_shape=input_shape, **train_cfg)
 
     print(encoder.model.summary())
+    end_t = time.time()
+    
+    print(f'\n---- Model has been initialized, elapsed: {end_t - start_t} ----\n')
 
     # Train the encoder
     print('\n---- Training the encoder ----\n')
 
     # callbacks, save the best model, and early stop if no improvement in val_loss
     stop_early = keras.callbacks.EarlyStopping(monitor='val_loss',
-                                               patience=10, restore_best_weights=True)
+                                               patience=5, restore_best_weights=True)
     save_best = keras.callbacks.ModelCheckpoint(filepath=os.path.join(weights_dir, 'encoder.h5'),
                                                 monitor='val_loss', save_best_only=True)
 
@@ -161,7 +173,7 @@ if __name__ == '__main__':
     history = encoder.model.fit(
         train_dataset, epochs=train_cfg['epochs'],
         validation_data=valid_dataset,
-        callbacks=[save_best])
+        callbacks=[stop_early, save_best])
 
     total_time = time.time() - start_time
     print(
