@@ -197,7 +197,8 @@ if __name__ == '__main__':
         history = encoder.model.fit(
             train_dataset, epochs=train_cfg['epochs'],
             validation_data=valid_dataset,
-            callbacks=[stop_early, save_best])
+            callbacks=[stop_early, save_best],
+            verbose=0)
 
         total_time = time.time() - start_time
         print(
