@@ -12,6 +12,7 @@ class Encoder(keras.Model):
                  pooling=None, pooling_size=[2, 2],
                  pooling_strides=[1, 1], pooling_padding='valid',
                  dropout=0.0, learning_rate=0.002, loss='mse',
+                 loss_weights=None,
                  **kwargs):
         super(Encoder, self).__init__()
         self.latent_dim = dense_layers[-1]
@@ -62,7 +63,8 @@ class Encoder(keras.Model):
 
         # Also initialize the optimizer and compile the model
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
-        self.model.compile(optimizer=optimizer, loss=loss)
+        self.model.compile(optimizer=optimizer, loss=loss,
+                           loss_weights=loss_weights)
 
         # self.extender = keras.Sequential()
         # self.extender.add(keras.layers.InputLayer(
@@ -152,7 +154,6 @@ class Decoder(keras.Model):
         # Also initialize the optimizer and compile the model
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
         self.model.compile(optimizer=optimizer, loss=loss)
-
 
     @tf.function
     def decode(self, z):

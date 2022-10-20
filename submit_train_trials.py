@@ -25,52 +25,150 @@ configs = [
     {
         'encoder': {
             'epochs': 20,
-            'dense_layers': [256, 7],
-            'filters': [32, 64, 128, 256],
+            'dense_layers': [64, 7],
+            'filters': [32, 64],
             'cropping': [0, 0],
-            'kernel_size': 3, 'strides': [2, 2],
-            'activation': 'relu',
-            'pooling': None, 'pooling_size': [2, 2],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-            'dropout': 0,
-            'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 0.2,
-            'normalization': 'minmax'
-        },
-    },
-    {
-        'encoder': {
-            'epochs': 20,
-            'dense_layers': [256, 7],
-            'filters': [32, 64, 128, 256],
-            'cropping': [0, 0],
-            'kernel_size': 3, 'strides': [2, 2],
-            'activation': 'relu',
-            'pooling': None, 'pooling_size': [2, 2],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-            'dropout': 0.05,
-            'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 0.2,
-            'normalization': 'minmax'
-        },
-    },
-    {
-        'encoder': {
-            'epochs': 20,
-            'dense_layers': [256, 7],
-            'filters': [32, 64, 128, 256],
-            'cropping': [14, 14],
             'kernel_size': 3, 'strides': [2, 2],
             'activation': 'relu',
             'pooling': None, 'pooling_size': [2, 2],
             'pooling_strides': [1, 1], 'pooling_padding': 'valid',
             'dropout': 0.1,
             'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 0.2,
-            'normalization': 'minmax'
+            'dataset%': 0.1,
+            'normalization': 'minmax',
+            'loss_weights': [1, 1, 1, 1, 1, 1, 1]
         },
     },
-   # {
+
+    {
+        'encoder': {
+            'epochs': 20,
+            'dense_layers': [64, 7],
+            'filters': [32, 64],
+            'cropping': [0, 0],
+            'kernel_size': 5, 'strides': [2, 2],
+            'activation': 'relu',
+            'pooling': None, 'pooling_size': [2, 2],
+            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+            'dropout': 0.1,
+            'loss': 'mse', 'lr': 1e-3,
+            'dataset%': 0.1,
+            'normalization': 'minmax',
+            'loss_weights': [1, 1, 1, 1, 1, 1, 1]
+        },
+    },
+
+
+    {
+        'encoder': {
+            'epochs': 20,
+            'dense_layers': [64, 7],
+            'filters': [32, 64],
+            'cropping': [0, 0],
+            'kernel_size': 7, 'strides': [2, 2],
+            'activation': 'relu',
+            'pooling': None, 'pooling_size': [2, 2],
+            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+            'dropout': 0.1,
+            'loss': 'mse', 'lr': 1e-3,
+            'dataset%': 0.1,
+            'normalization': 'minmax',
+            'loss_weights': [1, 1, 1, 1, 1, 1, 1]
+        },
+    },
+
+    {
+        'encoder': {
+            'epochs': 20,
+            'dense_layers': [64, 7],
+            'filters': [32, 64],
+            'cropping': [0, 0],
+            'kernel_size': 10, 'strides': [2, 2],
+            'activation': 'relu',
+            'pooling': None, 'pooling_size': [2, 2],
+            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+            'dropout': 0.1,
+            'loss': 'mse', 'lr': 1e-3,
+            'dataset%': 0.1,
+            'normalization': 'minmax',
+            'loss_weights': [1, 1, 1, 1, 1, 1, 1]
+        },
+    },
+
+    # {
+    #     'encoder': {
+    #         'epochs': 20,
+    #         'dense_layers': [256, 7],
+    #         'filters': [32, 64, 128, 256],
+    #         'cropping': [0, 0],
+    #         'kernel_size': 3, 'strides': [2, 2],
+    #         'activation': 'relu',
+    #         'pooling': None, 'pooling_size': [2, 2],
+    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+    #         'dropout': 0.1,
+    #         'loss': 'mse', 'lr': 1e-3,
+    #         'dataset%': 0.1,
+    #         'normalization': 'minmax',
+    #         'loss_weights': [0.1, 0.1, 0.1, 1, 0.1, 0.1, 0.1]
+    #     },
+    # },
+
+    # {
+    #     'encoder': {
+    #         'epochs': 20,
+    #         'dense_layers': [256, 7],
+    #         'filters': [32, 64, 128, 256],
+    #         'cropping': [0, 0],
+    #         'kernel_size': 3, 'strides': [2, 2],
+    #         'activation': 'relu',
+    #         'pooling': None, 'pooling_size': [2, 2],
+    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+    #         'dropout': 0.1,
+    #         'loss': 'mse', 'lr': 1e-3,
+    #         'dataset%': 0.25,
+    #         'normalization': 'minmax',
+    #         'loss_weights': [1, 1, 1, 1, 1, 1, 1]
+    #     },
+    # },
+
+    # {
+    #     'encoder': {
+    #         'epochs': 20,
+    #         'dense_layers': [256, 7],
+    #         'filters': [32, 64, 128, 256],
+    #         'cropping': [0, 0],
+    #         'kernel_size': 3, 'strides': [2, 2],
+    #         'activation': 'relu',
+    #         'pooling': None, 'pooling_size': [2, 2],
+    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+    #         'dropout': 0.1,
+    #         'loss': 'mse', 'lr': 1e-3,
+    #         'dataset%': 0.5,
+    #         'normalization': 'minmax',
+    #         'loss_weights': [1, 1, 1, 1, 1, 1, 1]
+    #     },
+    # },
+
+    # {
+    #     'encoder': {
+    #         'epochs': 20,
+    #         'dense_layers': [256, 7],
+    #         'filters': [32, 64, 128, 256],
+    #         'cropping': [0, 0],
+    #         'kernel_size': 3, 'strides': [2, 2],
+    #         'activation': 'relu',
+    #         'pooling': None, 'pooling_size': [2, 2],
+    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+    #         'dropout': 0.1,
+    #         'loss': 'mse', 'lr': 1e-3,
+    #         'dataset%': 0.75,
+    #         'normalization': 'minmax',
+    #         'loss_weights': [1, 1, 1, 1, 1, 1, 1]
+    #     },
+    # },
+
+
+  # {
     #     'decoder': {
     #         'epochs': 100,
     #         'dense_layers': [8, 512],

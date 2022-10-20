@@ -31,8 +31,11 @@ timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 # Data specific
 IMG_OUTPUT_SIZE = 128
 BATCH_SIZE = 128  # 8
-BUFFER_SIZE = 32768
+# BUFFER_SIZE = 32768
+BUFFER_SIZE = 256
+
 latent_dim = 7  # 6 + the new VrfSPS
+num_Turns_Case = 50+1
 
 # Train specific
 train_cfg = {
@@ -51,7 +54,8 @@ train_cfg = {
     'loss': 'mse',
     'lr': 1e-3,
     'dataset%': 0.1,
-    'normalization': 'std'
+    'normalization': 'std',
+    'loss_weights': [1, 1, 1, 1, 1, 1, 1]
 
 }
 
@@ -115,27 +119,37 @@ if __name__ == '__main__':
     try:
         start_t = time.time()
         # Create the datasets
-        # First the training data
-        file_names = sample_files(TRAINING_PATH, train_cfg['dataset%'])
-        print('Training files: ', len(file_names))
-        # convert to dataset
+        # 1. Randomly select the training data
+        file_names = sample_files(
+            TRAINING_PATH, train_cfg['dataset%'], keep_every=num_Turns_Case)
+        print('Number of Training files: ', len(file_names))
+        
+        # 2. Convert to tensor dataset
         train_dataset = tf.data.Dataset.from_tensor_slices(file_names)
-        # Then map function to dataset
+        
+        # 3. Then map function to dataset
         # this returns pairs of tensors with shape (128, 128, 1) and (7,)
         train_dataset = train_dataset.map(lambda x: tf.py_function(
             load_encoder_data,
             [x, train_cfg['normalization'], True],
             [tf.float32, tf.float32]))
-        # cache the dataset
-        train_dataset = train_dataset.cache(
-            os.path.join(cache_dir, 'train_cache'))
+
+        # 4. Ignore errors in case they appear
+        train_dataset = train_dataset.apply(tf.data.experimental.ignore_errors())
+
+        # 5. Optionally cache the dataset
+        # train_dataset = train_dataset.cache(
+        #     os.path.join(cache_dir, 'train_cache'))
         # shuffle the dataset
-        train_dataset = train_dataset.shuffle(BUFFER_SIZE, seed=1)
         # batch the dataset
+
+        # 6. Divide dataset in batces
         train_dataset = train_dataset.batch(BATCH_SIZE)
 
-        file_names = sample_files(VALIDATION_PATH, train_cfg['dataset%'])
-        print('Validation files: ', len(file_names))
+        # Repeat for validation data
+        file_names = sample_files(
+            VALIDATION_PATH, train_cfg['dataset%'], keep_every=num_Turns_Case)
+        print('Number of Validation files: ', len(file_names))
         # convert to dataset
         valid_dataset = tf.data.Dataset.from_tensor_slices(file_names)
         # Then map function to dataset
@@ -144,11 +158,13 @@ if __name__ == '__main__':
             load_encoder_data,
             [x, train_cfg['normalization'], True],
             [tf.float32, tf.float32]))
+        # Ignore errors
+        valid_dataset = valid_dataset.apply(
+            tf.data.experimental.ignore_errors())
+
         # cache the dataset
-        valid_dataset = valid_dataset.cache(
-            os.path.join(cache_dir, 'valid_cache'))
-        # shuffle the dataset
-        valid_dataset = valid_dataset.shuffle(BUFFER_SIZE, seed=1)
+        # valid_dataset = valid_dataset.cache(
+        #     os.path.join(cache_dir, 'valid_cache'))
         # batch the dataset
         valid_dataset = valid_dataset.batch(BATCH_SIZE)
 
