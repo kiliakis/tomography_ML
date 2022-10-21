@@ -4,6 +4,74 @@ import numpy as np
 from utils import normalize_params, conv2D_output_size
 
 
+class EncoderFunc():
+    # Pooling can be None, or 'Average' or 'Max'
+    def __init__(self, input_shape, dense_layers, filters,
+                 cropping=[[0, 0], [0, 0]], kernel_size=3, strides=[2, 2],
+                 activation='relu',
+                 pooling=None, pooling_size=[2, 2],
+                 pooling_strides=[1, 1], pooling_padding='valid',
+                 dropout=0.0, learning_rate=0.002, loss='mse',
+                 loss_weights=None,
+                 output_names=['phEr', 'enEr', 'bl',
+                               'inten', 'Vrf', 'mu', 'VrfSPS'],
+                 **kwargs):
+
+        assert len(output_names) == dense_layers[-1]
+        self.output_names = output_names
+        self.inputShape = input_shape
+
+        # The encoder consumes the input and produces the latents features
+        # Which are 7: phEr, enEr, bl, inten, Vrf, mu, VrfSPS
+
+        # set the input size
+        inputs = keras.Input(shape=input_shape)
+        # crop the edges
+        x = keras.layers.Cropping2D(cropping=cropping, name='Crop')(inputs)
+        # For evey Convolutional layer
+        for i, f in enumerate(filters):
+            # Add the Convolution
+            x = keras.layers.Conv2D(
+                filters=f, kernel_size=kernel_size, strides=strides,
+                activation=activation, name=f'CNN_{i+1}')(x)
+            # Optional pooling after the convolution
+            if pooling == 'Max':
+                x = keras.layers.MaxPooling2D(
+                    pool_size=pooling_size, strides=pooling_strides,
+                    padding=pooling_padding, name=f'MaxPooling_{i+1}')(x)
+            elif pooling == 'Average':
+                x = keras.layers.AveragePooling2D(
+                    pool_size=pooling_size, strides=pooling_strides,
+                    padding=pooling_padding, name=f'AveragePooling_{i+1}')(x)
+
+        # Flatten after the convolutions
+        x = keras.layers.Flatten(name='Flatten')(x)
+        # For each optional dense layer
+        for i, layer in enumerate(dense_layers[:-1]):
+            # Add the layer
+            x = keras.layers.Dense(layer, activation=activation,
+                                   name=f'Dense_{i+1}')(x)
+            # Add dropout optionally
+            if dropout > 0 and dropout < 1:
+                x = keras.layers.Dropout(
+                    dropout, name=f'Dropout_{i+1}')(x)
+
+        # Add the final layers, one for each output
+        outputs = []
+        for var_name in output_names:
+            outputs.append(keras.layers.Dense(1, name=var_name)(x))
+
+        self.model = keras.Model(input=inputs, outputs=outputs)
+        # Also initialize the optimizer and compile the model
+        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+        self.model.compile(optimizer=optimizer, loss=loss,
+                           loss_weights=loss_weights)
+
+    @tf.function
+    def encode(self, x):
+        return self.model(x)
+
+
 class Encoder(keras.Model):
     # Pooling can be None, or 'Average' or 'Max'
     def __init__(self, input_shape, dense_layers, filters,
@@ -65,24 +133,6 @@ class Encoder(keras.Model):
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
         self.model.compile(optimizer=optimizer, loss=loss,
                            loss_weights=loss_weights)
-
-        # self.extender = keras.Sequential()
-        # self.extender.add(keras.layers.InputLayer(
-        #     input_shape=self.latent_dim + self.additional_latent_dim))
-
-        # t_shape = (t_shape[0]+1, t_shape[1]+1, int(t_shape[2]/2))
-
-        # self.decoder = keras.Sequential()
-        # self.decoder.add(keras.layers.InputLayer(
-        #     input_shape=(self.latent_dim + self.additional_latent_dim)))
-        # self.decoder.add(keras.layers.Dense(
-        #     units=np.prod(t_shape), activation=tf.nn.relu))
-        # self.decoder.add(keras.layers.Reshape(target_shape=t_shape))
-        # for f in reversed(filters):
-        #     self.decoder.add(keras.layers.Conv2DTranspose(
-        #         filters=f, kernel_size=3, strides=2, padding='same', activation='relu'))
-        # self.decoder.add(keras.layers.Conv2DTranspose(
-        #     filters=1, kernel_size=3, strides=1, padding='same'))
 
     @tf.function
     def encode(self, x):
