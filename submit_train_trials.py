@@ -29,11 +29,11 @@ configs = [
             'filters': [32, 64],
             'cropping': [0, 0],
             'kernel_size': 7, 'strides': [2, 2],
-            'activation': 'elu',
+            'activation': 'relu',
             'pooling': None, 'pooling_size': [2, 2],
             'pooling_strides': [1, 1], 'pooling_padding': 'valid',
             'dropout': 0.1,
-            'loss': 'mse', 'lr': 1e-3,
+            'loss': 'mse', 'lr': 1e-4,
             'dataset%': 0.5,
             'normalization': 'minmax',
             'loss_weights': [1, 1, 1, 1, 1, 1, 1]
@@ -47,11 +47,11 @@ configs = [
             'filters': [32, 64],
             'cropping': [0, 0],
             'kernel_size': 7, 'strides': [2, 2],
-            'activation': 'gelu',
+            'activation': 'relu',
             'pooling': None, 'pooling_size': [2, 2],
             'pooling_strides': [1, 1], 'pooling_padding': 'valid',
             'dropout': 0.1,
-            'loss': 'mse', 'lr': 1e-3,
+            'loss': 'mse', 'lr': 5e-4,
             'dataset%': 0.5,
             'normalization': 'minmax',
             'loss_weights': [1, 1, 1, 1, 1, 1, 1]
@@ -66,11 +66,11 @@ configs = [
             'filters': [32, 64],
             'cropping': [0, 0],
             'kernel_size': 7, 'strides': [2, 2],
-            'activation': 'leaky_relu',
+            'activation': 'relu',
             'pooling': None, 'pooling_size': [2, 2],
             'pooling_strides': [1, 1], 'pooling_padding': 'valid',
             'dropout': 0.1,
-            'loss': 'mse', 'lr': 1e-3,
+            'loss': 'mse', 'lr': 2e-3,
             'dataset%': 0.5,
             'normalization': 'minmax',
             'loss_weights': [1, 1, 1, 1, 1, 1, 1]
@@ -84,16 +84,34 @@ configs = [
             'filters': [32, 64],
             'cropping': [0, 0],
             'kernel_size': 7, 'strides': [2, 2],
-            'activation': 'selu',
+            'activation': 'relu',
             'pooling': None, 'pooling_size': [2, 2],
             'pooling_strides': [1, 1], 'pooling_padding': 'valid',
             'dropout': 0.1,
-            'loss': 'mse', 'lr': 1e-3,
+            'loss': 'mse', 'lr': 5e-3,
             'dataset%': 0.5,
             'normalization': 'minmax',
             'loss_weights': [1, 1, 1, 1, 1, 1, 1]
         },
     },
+    {
+        'encoder': {
+            'epochs': 20,
+            'dense_layers': [64, 7],
+            'filters': [32, 64],
+            'cropping': [0, 0],
+            'kernel_size': 7, 'strides': [2, 2],
+            'activation': 'relu',
+            'pooling': None, 'pooling_size': [2, 2],
+            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+            'dropout': 0.1,
+            'loss': 'mse', 'lr': 1e-2,
+            'dataset%': 0.5,
+            'normalization': 'minmax',
+            'loss_weights': [1, 1, 1, 1, 1, 1, 1]
+        },
+    },
+
 
   # {
     #     'decoder': {
