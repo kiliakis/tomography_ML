@@ -61,7 +61,7 @@ class EncoderFunc():
         for var_name in output_names:
             outputs.append(keras.layers.Dense(1, name=var_name)(x))
 
-        self.model = keras.Model(input=inputs, outputs=outputs)
+        self.model = keras.Model(inputs=inputs, outputs=outputs)
         # Also initialize the optimizer and compile the model
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
         self.model.compile(optimizer=optimizer, loss=loss,
