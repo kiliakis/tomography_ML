@@ -18,32 +18,18 @@ if submission_system == 'condor':
 else:
     print('Invalid submission system')
     exit()
+ENCODER_SCRIPT='train_encoder.py'
+DECODER_SCRIPT = 'train_decoder.py'
 
 TRIALS_DIR = os.path.join(PROJECT_DIR, 'trials')
 
 configs = [
+
     {
         'encoder': {
-            'epochs': 20,
-            'dense_layers': [32, 7],
-            'filters': [4, 8, 16],
-            'cropping': [0, 0],
-            'kernel_size': 7, 'strides': [2, 2],
-            'activation': 'relu',
-            'pooling': None, 'pooling_size': [2, 2],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-            'dropout': 0.1,
-            'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 0.5,
-            'normalization': 'minmax',
-            'loss_weights': [1, 1, 1, 1, 1, 1, 1]
-        },
-    },
-    {
-        'encoder': {
-            'epochs': 20,
+            'epochs': 50,
             'dense_layers': [128, 7],
-            'filters': [4, 8, 16],
+            'filters': [8, 16, 32],
             'cropping': [0, 0],
             'kernel_size': 7, 'strides': [2, 2],
             'activation': 'relu',
@@ -51,80 +37,66 @@ configs = [
             'pooling_strides': [1, 1], 'pooling_padding': 'valid',
             'dropout': 0.1,
             'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 0.5,
+            'dataset%': 1,
             'normalization': 'minmax',
             'loss_weights': [1, 1, 1, 1, 1, 1, 1]
         },
     },
-    {
-        'encoder': {
-            'epochs': 20,
-            'dense_layers': [256, 7],
-            'filters': [4, 8, 16],
-            'cropping': [0, 0],
-            'kernel_size': 7, 'strides': [2, 2],
-            'activation': 'relu',
-            'pooling': None, 'pooling_size': [2, 2],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-            'dropout': 0.1,
-            'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 0.5,
-            'normalization': 'minmax',
-            'loss_weights': [1, 1, 1, 1, 1, 1, 1]
-        },
-    },
-    {
-        'encoder': {
-            'epochs': 20,
-            'dense_layers': [32, 7],
-            'filters': [16, 32, 64],
-            'cropping': [0, 0],
-            'kernel_size': 7, 'strides': [2, 2],
-            'activation': 'relu',
-            'pooling': None, 'pooling_size': [2, 2],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-            'dropout': 0.1,
-            'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 0.5,
-            'normalization': 'minmax',
-            'loss_weights': [1, 1, 1, 1, 1, 1, 1]
-        },
-    },
-    {
-        'encoder': {
-            'epochs': 20,
-            'dense_layers': [128, 7],
-            'filters': [16, 32, 64],
-            'cropping': [0, 0],
-            'kernel_size': 7, 'strides': [2, 2],
-            'activation': 'relu',
-            'pooling': None, 'pooling_size': [2, 2],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-            'dropout': 0.1,
-            'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 0.5,
-            'normalization': 'minmax',
-            'loss_weights': [1, 1, 1, 1, 1, 1, 1]
-        },
-    },
-    {
-        'encoder': {
-            'epochs': 20,
-            'dense_layers': [256, 7],
-            'filters': [16, 32, 64],
-            'cropping': [0, 0],
-            'kernel_size': 7, 'strides': [2, 2],
-            'activation': 'relu',
-            'pooling': None, 'pooling_size': [2, 2],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-            'dropout': 0.1,
-            'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 0.5,
-            'normalization': 'minmax',
-            'loss_weights': [1, 1, 1, 1, 1, 1, 1]
-        },
-    },
- 
+
+    # {
+    #     'encoder': {
+    #         'epochs': 20,
+    #         'dense_layers': [96, 7],
+    #         'filters': [8, 16, 32],
+    #         'cropping': [0, 0],
+    #         'kernel_size': 7, 'strides': [2, 2],
+    #         'activation': 'relu',
+    #         'pooling': None, 'pooling_size': [2, 2],
+    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+    #         'dropout': 0.1,
+    #         'loss': 'mse', 'lr': 1e-3,
+    #         'dataset%': 0.5,
+    #         'normalization': 'minmax',
+    #         'loss_weights': [1, 1, 1, 1, 1, 1, 1]
+    #     },
+    # },
+
+    # {
+    #     'encoder': {
+    #         'epochs': 20,
+    #         'dense_layers': [160, 7],
+    #         'filters': [8, 16, 32],
+    #         'cropping': [0, 0],
+    #         'kernel_size': 7, 'strides': [2, 2],
+    #         'activation': 'relu',
+    #         'pooling': None, 'pooling_size': [2, 2],
+    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+    #         'dropout': 0.1,
+    #         'loss': 'mse', 'lr': 1e-3,
+    #         'dataset%': 0.5,
+    #         'normalization': 'minmax',
+    #         'loss_weights': [1, 1, 1, 1, 1, 1, 1]
+    #     },
+    # },
+
+    # {
+    #     'encoder': {
+    #         'epochs': 20,
+    #         'dense_layers': [192, 7],
+    #         'filters': [8, 16, 32],
+    #         'cropping': [0, 0],
+    #         'kernel_size': 7, 'strides': [2, 2],
+    #         'activation': 'relu',
+    #         'pooling': None, 'pooling_size': [2, 2],
+    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+    #         'dropout': 0.1,
+    #         'loss': 'mse', 'lr': 1e-3,
+    #         'dataset%': 0.5,
+    #         'normalization': 'minmax',
+    #         'loss_weights': [1, 1, 1, 1, 1, 1, 1]
+    #     },
+    # },
+
   # {
     #     'decoder': {
     #         'epochs': 100,
@@ -222,10 +194,10 @@ if __name__ == '__main__':
             f.write(f"# Run the python script\n")
             if 'encoder' in config:
                 f.write(
-                    f"{PYTHON} train_encoder.py -c {config_file_name}\n")
+                    f"{PYTHON} {ENCODER_SCRIPT} -c {config_file_name}\n")
             if 'decoder' in config:
                 f.write(
-                    f"{PYTHON} train_decoder.py -c {config_file_name}\n")
+                    f"{PYTHON} {DECODER_SCRIPT} -c {config_file_name}\n")
 
         # Print the shell script content on the screen
         # subprocess.run(["cat", "execute.sh"])

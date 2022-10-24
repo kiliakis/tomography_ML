@@ -14,10 +14,14 @@ def plot_loss(lines, title='', figname=None):
     plt.figure()
     plt.title(title)
     for line in lines.keys():
-        plt.semilogy(lines[line], marker='x', label=line)
+        if 'val' in line:
+            marker = 'x'
+        else:
+            marker = '.'
+        plt.semilogy(lines[line], marker=marker, label=line)
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
-    plt.legend()
+    plt.legend(ncol=2)
     plt.tight_layout()
     if figname:
         plt.savefig(figname, dpi=300)
