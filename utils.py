@@ -14,7 +14,7 @@ def plot_loss(lines, title='', figname=None):
     plt.figure()
     plt.title(title)
     for line in lines.keys():
-        if 'val' in line:
+        if 'val' in line.lower():
             marker = 'x'
         else:
             marker = '.'
@@ -25,7 +25,7 @@ def plot_loss(lines, title='', figname=None):
     plt.tight_layout()
     if figname:
         plt.savefig(figname, dpi=300)
-    plt.close()
+        plt.close()
 
 
 def get_cmap(path=''):
@@ -122,19 +122,20 @@ def sample_files(path, percent, keep_every=1):
     for dir in dirs:
         # Get entire list of files
         files = os.listdir(dir)
-        # randomly sample the list
-        sample = np.random.choice(files, int(percent * len(files)),
-                                replace=False)
         
         # this loop is to make sure that the inputs are unique
-        for f in sample:
+        for f in files:
             file_id = int(f.split('.pk')[0]) // keep_every
             if file_id not in seen_set:
                 seen_set.add(file_id)
                 ret_files.append(os.path.join(dir, f))
         # sample = [os.path.join(dir, f) for f in sample]
         # ret_files += sample
-    np.random.shuffle(ret_files)
+
+    # randomly sample the list
+    ret_files = np.random.choice(ret_files, int(percent * len(ret_files)),
+                                 replace=False)
+    # np.random.shuffle(ret_files)
     return ret_files
 
 
