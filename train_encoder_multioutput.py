@@ -55,7 +55,13 @@ train_cfg = {
     'dataset%': 0.1,
     'normalization': 'minmax',
     'loss_weights': [0, 1, 2, 3, 4, 5, 6]
+}
 
+model_cfg = {
+    'phEr': {
+        'dropout': 0.,
+        'filters': [8, 16, 32]
+    }
 }
 
 if __name__ == '__main__':
@@ -68,13 +74,17 @@ if __name__ == '__main__':
             input_config = yaml.load(f, Loader=yaml.FullLoader)
         # print(input_config)
         train_cfg = input_config['encoder']
-        # cnn_filters = input_config['cnn_filters']
-        # dataset_keep_percent = input_config['dataset_keep_percent']
+        if 'model_cfg' in input_config:
+            model_cfg = input_config['model_cfg']
         timestamp = input_config['timestamp']
 
     print('Configuration:')
     for k, v in train_cfg.items():
         print(k, v)
+
+    print('Model specific configuration:')
+    for var in model_cfg:
+        print(var, model_cfg[var])
 
     # Initialize directories
     trial_dir = os.path.join('./trials/', timestamp)
@@ -228,7 +238,10 @@ if __name__ == '__main__':
 
         train_loss_l = []
         valid_loss_l = []
+        max_length = np.max([len(v) for v in historyMulti.values()])
         for k, v in historyMulti.items():
+            if len(v) < max_length:
+                v = v + [v[-1]] * (max_length - len(v))
             if 'val' in k:
                 valid_loss_l.append(v)
             else:

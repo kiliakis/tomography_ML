@@ -1,8 +1,65 @@
 import tensorflow as tf
 from tensorflow import keras
 import numpy as np
-from utils import normalize_params, conv2D_output_size
+from utils import normalize_params
 
+
+class EncoderSingle():
+    # Pooling can be None, or 'Average' or 'Max'
+    def __init__(self, output_name, input_shape, dense_layers, filters,
+                 cropping=[[0, 0], [0, 0]], kernel_size=7, strides=[2, 2],
+                 activation='relu',
+                 pooling=None, pooling_size=[2, 2],
+                 pooling_strides=[1, 1], pooling_padding='valid',
+                 dropout=0.0, learning_rate=0.001, loss='mse',
+                 **kwargs):
+
+        self.output_name = output_name
+        self.inputShape = input_shape
+
+        # set the input size
+        inputs = keras.Input(shape=input_shape, name='Input')
+        # crop the edges
+        cropped = keras.layers.Cropping2D(
+            cropping=cropping, name='Crop')(inputs)
+        x = cropped
+        # For evey Convolutional layer
+        for i, f in enumerate(filters):
+            # Add the Convolution
+            x = keras.layers.Conv2D(
+                filters=f, kernel_size=kernel_size, strides=strides,
+                activation=activation, name=f'{output_name}_CNN_{i+1}')(x)
+            # Optional pooling after the convolution
+            if pooling == 'Max':
+                x = keras.layers.MaxPooling2D(
+                    pool_size=pooling_size, strides=pooling_strides,
+                    padding=pooling_padding, name=f'{output_name}_MaxPooling_{i+1}')(x)
+            elif pooling == 'Average':
+                x = keras.layers.AveragePooling2D(
+                    pool_size=pooling_size, strides=pooling_strides,
+                    padding=pooling_padding, name=f'{output_name}_AveragePooling_{i+1}')(x)
+
+        # Flatten after the convolutions
+        x = keras.layers.Flatten(name=f'{output_name}_Flatten')(x)
+        # For each optional dense layer
+        for i, layer in enumerate(dense_layers):
+            # Add the layer
+            x = keras.layers.Dense(layer, activation=activation,
+                                    name=f'{output_name}_Dense_{i+1}')(x)
+            # Add dropout optionally
+            if dropout > 0 and dropout < 1:
+                x = keras.layers.Dropout(
+                    dropout, name=f'{output_name}_Dropout_{i+1}')(x)
+
+        # Add the final layers, one for each output
+        outputs = keras.layers.Dense(1, name=output_name)(x)
+
+        # Also initialize the optimizer and compile the model
+        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+        model = keras.Model(inputs=inputs, outputs=outputs)
+        model.compile(optimizer=optimizer, loss=loss)
+
+        self.model = model
 
 class EncoderMulti():
     # Pooling can be None, or 'Average' or 'Max'
@@ -15,11 +72,15 @@ class EncoderMulti():
                  loss_weights=None,
                  output_names=['phEr', 'enEr', 'bl',
                                'inten', 'Vrf', 'mu', 'VrfSPS'],
+                 model_cfg={},
                  **kwargs):
 
         # assert len(output_names) == dense_layers[-1]
         self.output_names = output_names
         self.inputShape = input_shape
+        if isinstance(kernel_size, int):
+            kernel_size = [kernel_size] * len(filters)
+        assert len(kernel_size) == len(filters)
 
         # The encoder consumes the input and produces the latents features
         # Which are 7: phEr, enEr, bl, inten, Vrf, mu, VrfSPS
@@ -36,7 +97,7 @@ class EncoderMulti():
             for i, f in enumerate(filters):
                 # Add the Convolution
                 x = keras.layers.Conv2D(
-                    filters=f, kernel_size=kernel_size, strides=strides,
+                    filters=f, kernel_size=kernel_size[i], strides=strides,
                     activation=activation, name=f'{var_name}_CNN_{i+1}')(x)
                 # Optional pooling after the convolution
                 if pooling == 'Max':
