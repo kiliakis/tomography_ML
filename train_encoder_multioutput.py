@@ -1,8 +1,6 @@
 # Train the ML model
 
-from models import Encoder, EncoderFunc, EncoderMulti
-from utils import sample_files
-from utils import plot_loss, load_encoder_data
+
 import time
 import glob
 import tensorflow as tf
@@ -13,9 +11,12 @@ import shutil
 import numpy as np
 from datetime import datetime
 import argparse
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-mpl.use('Agg')
+# import matplotlib.pyplot as plt
+# import matplotlib as mpl
+# mpl.use('Agg')
+
+from models import EncoderSingle
+from utils import sample_files, plot_loss, load_encoder_data
 
 parser = argparse.ArgumentParser(description='Train the encoder/ decoder models',
                                  usage='python train_model.py -c config.yml')
@@ -30,7 +31,6 @@ timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
 IMG_OUTPUT_SIZE = 128
-BATCH_SIZE = 32  # 8
 
 num_Turns_Case = 50+1
 var_names = ['phEr', 'enEr', 'bl',
@@ -54,7 +54,8 @@ train_cfg = {
     'lr': 1e-3,
     'dataset%': 0.1,
     'normalization': 'minmax',
-    'loss_weights': [0, 1, 2, 3, 4, 5, 6]
+    'loss_weights': [0, 1, 2, 3, 4, 5, 6],
+    'batch_size': 32
 }
 
 model_cfg = {
@@ -182,27 +183,31 @@ if __name__ == '__main__':
         print(
             f'\n---- Input files have been read, elapsed: {end_t - start_t} ----\n')
 
-        start_t = time.time()
+        # start_t = time.time()
         # Model instantiation
         input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
 
-        encoderMulti = EncoderMulti(input_shape=input_shape, **train_cfg)
+        # encoderMulti = EncoderMulti(input_shape=input_shape, **train_cfg)
 
         # for model in encoderMulti.models:
         #     print(model.summary())
-        end_t = time.time()
+        # end_t = time.time()
 
-        print(
-            f'\n---- Model has been initialized, elapsed: {end_t - start_t} ----\n')
+        # print(
+        #     f'\n---- Model has been initialized, elapsed: {end_t - start_t} ----\n')
 
         models = {}
 
         for i in train_cfg['loss_weights']:
             var_name = var_names[i]
-            models[var_name] = {'model': encoderMulti.models[var_name],
-                                'train': train_dataset.map(lambda x, y: (x, y[i])).batch(BATCH_SIZE),
-                                'valid': valid_dataset.map(lambda x, y: (x, y[i])).batch(BATCH_SIZE)}
-            print(encoderMulti.models[var_name].summary())
+            print(f'\n---- Initializing model: {var_name} ----\n')
+            cfg = train_cfg.copy()
+            cfg.update(model_cfg.get(var_name, {}))
+            model = encoderSingle(input_shape=input_shape, output_name=var_name, **cfg)
+            print(model.summary())
+            models[var_name] = {'model': model.model,
+                                'train': train_dataset.map(lambda x, y: (x, y[i])).batch(train_cfg['batch_size']),
+                                'valid': valid_dataset.map(lambda x, y: (x, y[i])).batch(train_cfg['batch_size'])}
 
         historyMulti = {}
         for var_name in models:

@@ -16,7 +16,10 @@ class EncoderSingle():
 
         self.output_name = output_name
         self.inputShape = input_shape
-
+        if isinstance(kernel_size, int):
+            kernel_size = [kernel_size] * len(filters)
+        assert len(kernel_size) == len(filters)
+        
         # set the input size
         inputs = keras.Input(shape=input_shape, name='Input')
         # crop the edges
@@ -27,7 +30,7 @@ class EncoderSingle():
         for i, f in enumerate(filters):
             # Add the Convolution
             x = keras.layers.Conv2D(
-                filters=f, kernel_size=kernel_size, strides=strides,
+                filters=f, kernel_size=kernel_size[i], strides=strides,
                 activation=activation, name=f'{output_name}_CNN_{i+1}')(x)
             # Optional pooling after the convolution
             if pooling == 'Max':

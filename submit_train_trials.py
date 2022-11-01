@@ -28,10 +28,10 @@ configs = [
     {
         'encoder': {
             'epochs': 50,
-            'dense_layers': [128, 32],
-            'filters': [8, 16],
+            'dense_layers': [1024, 256, 32],
+            'filters': [4, 8],
             'cropping': [0, 0],
-            'kernel_size': [13, 7],
+            'kernel_size': [5, 3],
             'strides': [2, 2],
             'activation': 'relu',
             'pooling': None, 'pooling_size': [2, 2],
@@ -53,10 +53,10 @@ configs = [
     {
         'encoder': {
             'epochs': 50,
-            'dense_layers': [128, 32],
-            'filters': [8, 16],
+            'dense_layers': [1024, 256, 32],
+            'filters': [8],
             'cropping': [0, 0],
-            'kernel_size': [13, 7],
+            'kernel_size': [3, 3],
             'strides': [2, 2],
             'activation': 'relu',
             'pooling': None, 'pooling_size': [2, 2],
@@ -79,10 +79,10 @@ configs = [
     {
         'encoder': {
             'epochs': 50,
-            'dense_layers': [128, 32],
-            'filters': [8, 16],
+            'dense_layers': [1024, 256, 32],
+            'filters': [4, 8],
             'cropping': [0, 0],
-            'kernel_size': [13, 7],
+            'kernel_size': [3, 3],
             'strides': [2, 2],
             'activation': 'relu',
             'pooling': None, 'pooling_size': [2, 2],
