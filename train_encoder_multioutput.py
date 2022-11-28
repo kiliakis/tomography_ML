@@ -108,7 +108,7 @@ model_cfg = {
     # Best inten config --> 7.82e-02 val_loss
     'inten': {
         'epochs': 30,
-        'cropping': [12, 12],
+        'cropping': [6, 6],
         'filters': [8, 16, 32],
         'kernel_size': [13, 7, 3],
         'strides': [2, 2],
@@ -120,18 +120,48 @@ model_cfg = {
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # best Vrf config --> 6.89e-05 val loss
+    # best Vrf config --> 5.11e-05 val loss
     'Vrf': {
-        'epochs': 30,
-        'cropping': [0, 0],
-        'filters': [4, 8],
-        'kernel_size': [5, 3],
+        'epochs': 40,
+        'cropping': [6, 6],
+        'filters': [8, 16, 32],
+        'kernel_size': [13, 7, 3],
         'strides': [2, 2],
         'dense_layers': [1024, 256, 64],
         'activation': 'relu',
         'pooling': None,
         'dropout': 0.,
         'lr': 5e-4,
+        'normalization': 'minmax',
+        'batch_size': 32
+    },
+    # best mu config --> 2.19e-03 val loss
+    'mu': {
+        'epochs': 60,
+        'cropping': [(6, 6), (6, 64)],
+        'filters': [8, 16, 32],
+        'kernel_size': [(13, 3), (7, 3), 3],
+        'strides': [2, 2],
+        'dense_layers': [1024, 256, 64],
+        'activation': 'relu',
+        'pooling': None,
+        'dropout': 0.0,
+        'lr': 1e-3,
+        'normalization': 'minmax',
+        'batch_size': 32
+    },
+    # best VrfSPS config --> 2.39e-03 val loss
+    'VrfSPS': {
+        'epochs': 50,
+        'cropping': [6, 6],
+        'filters': [8, 16, 32],
+        'kernel_size': [13, 7, 3],
+        'strides': [2, 2],
+        'dense_layers': [1024, 256, 32],
+        'activation': 'relu',
+        'pooling': None,
+        'dropout': 0.0,
+        'lr': 1e-3,
         'normalization': 'minmax',
         'batch_size': 32
     }

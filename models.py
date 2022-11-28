@@ -12,6 +12,7 @@ class EncoderSingle():
                  pooling=None, pooling_size=[2, 2],
                  pooling_strides=[1, 1], pooling_padding='valid',
                  dropout=0.0, learning_rate=0.001, loss='mse',
+                 metrics=['mae'],
                  **kwargs):
 
         self.output_name = output_name
@@ -60,7 +61,7 @@ class EncoderSingle():
         # Also initialize the optimizer and compile the model
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
         model = keras.Model(inputs=inputs, outputs=outputs)
-        model.compile(optimizer=optimizer, loss=loss)
+        model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
         self.model = model
 

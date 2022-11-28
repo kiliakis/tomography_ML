@@ -115,6 +115,8 @@ def read_pk(fname):
     return data['turn'], data['T_img'], data['PS'], data['fn'], data['params']
 
 # Returns a random sample of percent filenames from input path
+
+
 def sample_files(path, percent, keep_every=1):
     ret_files = []
     dirs = glob.glob(path + '/*x10K')
@@ -122,7 +124,7 @@ def sample_files(path, percent, keep_every=1):
     for dir in dirs:
         # Get entire list of files
         files = os.listdir(dir)
-        
+
         # this loop is to make sure that the inputs are unique
         for f in files:
             file_id = int(f.split('.pk')[0]) // keep_every
