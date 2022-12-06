@@ -15,16 +15,18 @@ skipturns = 3
 # Read normalized sim data or generate them?
 # readSimData = True
 # saveAllData = False
-eos = '/home/kiliakis/cernbox'
+# eos = '/home/kiliakis/cernbox'
+eos = '/eos/user/k/kiliakis/'
+
 simulations_dir = eos + '/tomo_data/results_tomo_02-12-22'
-save_dir = eos + '/tomo_data/datasets_02-12-22'
+save_dir = eos + '/tomo_data/datasets_encoder_02-12-22'
 
 # For traning, test and validation, out of all cases simulated (9229)
 num_Cases = -1
-skip_first = 0 # skip the first simulation dirs, useful for resuming after a crash
+skip_first = 2196 # skip the first simulation dirs, useful for resuming after a crash
 # out of the 100 turns selected by case (1 out of 3, so in max 300 turns)
-num_Turns_Case = 50
-num_Turns_Case_test = 1
+# num_Turns_Case = 50
+# num_Turns_Case_test = 1
 training_ratio = 0.85
 
 if __name__ == '__main__':
@@ -60,7 +62,8 @@ if __name__ == '__main__':
         print('Saving data to: ', SAVE_PATH)
         for fn in data_dirs:
             if i < skip_first:
-                i += num_Turns_Case
+                # i += num_Turns_Case
+                i+=1
                 continue
             print(i, fn)
             try:
@@ -94,15 +97,15 @@ if __name__ == '__main__':
                         #    'B_img': PS_img_dec
                            }
 
-            for turn in [0]+random.choices(normSimDict['turns'][1:], k=num_Turns_Case):
-                tenK = os.path.join(SAVE_PATH, f'{int(i // 10000)}tenK')
-                os.makedirs(tenK, exist_ok=True)
-                pk.dump({'turn': turn,
-                        'T_img': normSimDict['T_img'],
-                         'params': normSimDict['params'],
-                         'fn': normSimDict['fn'],
-                         'PS': normSimDict['B_img'][:, :, turn//skipturns]
-                         },
-                        open(os.path.join(tenK, "{:06d}.pk".format(i)), "wb"))
+            # for turn in [0]+random.choices(normSimDict['turns'][1:], k=num_Turns_Case):
+            tenK = os.path.join(SAVE_PATH, f'{int(i // 10000)}tenK')
+            os.makedirs(tenK, exist_ok=True)
+            pk.dump({
+                    'turn': 0,
+                    'T_img': normSimDict['T_img'],
+                    'params': normSimDict['params'],
+                    'fn': normSimDict['fn'],
+                    'PS': 0},
+                    open(os.path.join(tenK, "{:06d}.pk".format(i)), "wb"))
             
-                i += 1
+            i += 1

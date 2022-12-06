@@ -153,11 +153,11 @@ model_cfg = {
     # best VrfSPS config --> 2.39e-03 val loss
     'VrfSPS': {
         'epochs': 50,
-        'cropping': [6, 6],
-        'filters': [8, 16, 32],
-        'kernel_size': [13, 7, 3],
+        'cropping': [0, 0],
+        'filters': [4, 8, 16],
+        'kernel_size': [5, 5, 3],
         'strides': [2, 2],
-        'dense_layers': [1024, 256, 32],
+        'dense_layers': [1024, 256, 64],
         'activation': 'relu',
         'pooling': None,
         'dropout': 0.0,
@@ -204,10 +204,10 @@ if __name__ == '__main__':
     if gpus:
         try:
             # Currently, memory growth needs to be the same across GPUs
-            tf.config.experimental.set_memory_growth(gpus[device_to_use], True)
-            tf.config.experimental.set_virtual_device_configuration(
-                gpus[device_to_use],
-                [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=12*1024)])
+            # tf.config.experimental.set_memory_growth(gpus[device_to_use], True)
+            # tf.config.experimental.set_virtual_device_configuration(
+            #     gpus[device_to_use],
+            #     [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=12*1024)])
             logical_gpus = tf.config.experimental.list_logical_devices('GPU')
             print(len(gpus), "Physical GPUs,", len(
                 logical_gpus), "Logical GPUs")
