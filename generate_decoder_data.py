@@ -21,7 +21,7 @@ save_dir = eos + '/tomo_data/datasets_decoder_02-12-22'
 
 # For traning, test and validation, out of all cases simulated (9229)
 num_Cases = -1
-skip_first = 0 # skip the first simulation dirs, useful for resuming after a crash
+skip_first = 33768  # skip the first simulation dirs, useful for resuming after a crash
 # out of the 100 turns selected by case (1 out of 3, so in max 300 turns)
 num_Turns_Case = 20
 num_Turns_Case_test = 1
@@ -95,7 +95,7 @@ if __name__ == '__main__':
                            }
 
             for turn in [0]+random.choices(normSimDict['turns'][1:], k=num_Turns_Case):
-                tenK = os.path.join(SAVE_PATH, f'{int(i // 10000)}tenK')
+                tenK = os.path.join(SAVE_PATH, f'{int(i // 10000):02d}x10K')
                 os.makedirs(tenK, exist_ok=True)
                 pk.dump({'turn': turn,
                         'T_img': normSimDict['T_img'],

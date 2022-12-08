@@ -98,7 +98,7 @@ if __name__ == '__main__':
                            }
 
             # for turn in [0]+random.choices(normSimDict['turns'][1:], k=num_Turns_Case):
-            tenK = os.path.join(SAVE_PATH, f'{int(i // 10000)}tenK')
+            tenK = os.path.join(SAVE_PATH, f'{int(i // 10000):02d}x10K')
             os.makedirs(tenK, exist_ok=True)
             pk.dump({
                     'turn': 0,

@@ -60,7 +60,7 @@ train_cfg = {
 }
 
 model_cfg = {
-    # Best phEr config --> 2.79e-5 val_loss
+    # Best phEr config --> 2.47e-5 val_loss
     'phEr': {
         'epochs': 30,
         'dense_layers': [1024, 256, 32],
@@ -75,7 +75,7 @@ model_cfg = {
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # Best enErr config --> 6.71e-05 val_loss
+    # Best enErr config --> 6.99e-05 val_loss
     'enEr': {
         'epochs': 30,
         'dense_layers': [1024, 256, 64],
@@ -90,7 +90,7 @@ model_cfg = {
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # Best bl config --> 2.43e-04 val_loss
+    # Best bl config --> 2.19e-04 val_loss
     'bl': {
         'epochs': 30,
         'cropping': [12, 12],
@@ -105,7 +105,7 @@ model_cfg = {
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # Best inten config --> 7.82e-02 val_loss
+    # Best inten config --> 8.23e-02 val_loss
     'inten': {
         'epochs': 30,
         'cropping': [6, 6],
@@ -120,7 +120,7 @@ model_cfg = {
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # best Vrf config --> 5.11e-05 val loss
+    # best Vrf config --> 5.92e-05 val loss
     'Vrf': {
         'epochs': 40,
         'cropping': [6, 6],
@@ -135,12 +135,12 @@ model_cfg = {
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # best mu config --> 2.19e-03 val loss
+    # best mu config --> 8.8e-04 val loss
     'mu': {
         'epochs': 60,
-        'cropping': [(6, 6), (6, 64)],
+        'cropping': [0, 0],
         'filters': [8, 16, 32],
-        'kernel_size': [(13, 3), (7, 3), 3],
+        'kernel_size': [5, 5, 5],
         'strides': [2, 2],
         'dense_layers': [1024, 256, 64],
         'activation': 'relu',
@@ -150,14 +150,14 @@ model_cfg = {
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # best VrfSPS config --> 2.39e-03 val loss
+    # best VrfSPS config --> 1.18e-03 val loss
     'VrfSPS': {
-        'epochs': 50,
+        'epochs': 60,
         'cropping': [0, 0],
-        'filters': [4, 8, 16],
-        'kernel_size': [5, 5, 3],
+        'filters': [2, 4, 8],
+        'kernel_size': [5, 5, 5],
         'strides': [2, 2],
-        'dense_layers': [1024, 256, 64],
+        'dense_layers': [1024, 512, 128],
         'activation': 'relu',
         'pooling': None,
         'dropout': 0.0,
