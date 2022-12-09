@@ -16,3 +16,8 @@ __pycache__/
 weights/
 trials/
 archive/
+tomo_data/
+logs/
+plots/
+hparam_dicts/
+.ipynb_checkpoints/

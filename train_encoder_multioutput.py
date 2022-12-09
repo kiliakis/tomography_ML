@@ -26,20 +26,20 @@ parser.add_argument('-c', '--config', type=str, default=None,
                     help='A yaml configuration file with all training parameters.')
 
 # Initialize parameters
-data_dir = '/eos/user/k/kiliakis/tomo_data/datasets'
+data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_encoder_02-12-22'
 #data_dir = '/eos/kiliakis/tomo_data/datasets'
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
 IMG_OUTPUT_SIZE = 128
 DATA_LOAD_METHOD='TENSOR' # it can be TENSOR or DATASET
-num_Turns_Case = 50+1
+num_Turns_Case = 1
 var_names = ['phEr', 'enEr', 'bl',
              'inten', 'Vrf', 'mu', 'VrfSPS']
 
 # Train specific
 train_cfg = {
-    'epochs': 5,
+    'epochs': 10,
     'dense_layers': [16],
     'filters': [8],
     'cropping': [0, 0],
@@ -53,16 +53,18 @@ train_cfg = {
     'dropout': 0.1,
     'loss': 'mse',
     'lr': 1e-3,
-    'dataset%': 0.1,
+    'dataset%': 1,
     'normalization': 'minmax',
-    'loss_weights': [0, 1, 2, 3, 4, 5, 6],
+    # 'loss_weights': [0, 1, 2, 3, 4, 5, 6],
+    'loss_weights': [1],
+
     'batch_size': 32
 }
 
 model_cfg = {
     # Best phEr config --> 2.47e-5 val_loss
     'phEr': {
-        'epochs': 30,
+        'epochs': 60,
         'dense_layers': [1024, 256, 32],
         'cropping': [0, 0],
         'kernel_size': [3, 3],
@@ -75,11 +77,11 @@ model_cfg = {
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # Best enErr config --> 6.99e-05 val_loss
+    # Best enErr config --> 3.22e-05 val_loss
     'enEr': {
-        'epochs': 30,
+        'epochs': 60,
         'dense_layers': [1024, 256, 64],
-        'cropping': [12, 12],
+        'cropping': [6, 6],
         'kernel_size': [3, 3, 3],
         'strides': [2, 2],
         'activation': 'relu',
@@ -92,7 +94,7 @@ model_cfg = {
     },
     # Best bl config --> 2.19e-04 val_loss
     'bl': {
-        'epochs': 30,
+        'epochs': 60,
         'cropping': [12, 12],
         'filters': [8, 16, 32],
         'kernel_size': [(13, 3), (7, 3), (3, 3)],
@@ -122,7 +124,7 @@ model_cfg = {
     },
     # best Vrf config --> 5.92e-05 val loss
     'Vrf': {
-        'epochs': 40,
+        'epochs': 60,
         'cropping': [6, 6],
         'filters': [8, 16, 32],
         'kernel_size': [13, 7, 3],
