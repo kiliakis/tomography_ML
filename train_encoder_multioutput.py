@@ -77,7 +77,7 @@ model_cfg = {
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # Best enErr config --> 3.22e-05 val_loss
+    # Best enErr config --> 1.9703e-05 val_loss
     'enEr': {
         'epochs': 60,
         'dense_layers': [1024, 256, 64],
@@ -133,7 +133,7 @@ model_cfg = {
         'activation': 'relu',
         'pooling': None,
         'dropout': 0.,
-        'lr': 5e-4,
+        'lr': 1e-3,
         'normalization': 'minmax',
         'batch_size': 32
     },

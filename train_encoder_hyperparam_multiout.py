@@ -24,7 +24,7 @@ IMG_OUTPUT_SIZE = 128
 BATCH_SIZE = 32  # 8
 input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
 
-var_name = 'enEr'
+var_name = 'VrfSPS'
 
 # Train specific
 train_cfg = {
@@ -52,10 +52,10 @@ model_cfg = {
     var_name: {
         'epochs': 20,
         'cropping': [0, 0],
-        'filters': [8, 16, 32],
+        'filters': [2, 4, 8],
         'kernel_size': [5, 5, 5],
         'strides': [2, 2],
-        'dense_layers': [1024, 256, 64],
+        'dense_layers': [1024, 512, 128],
         'activation': 'relu',
         'pooling': None,
         'dropout': 0.0,
@@ -67,10 +67,9 @@ model_cfg = {
 
 param_space = {
     'cropping': [[0, 0], [6, 6], [12, 12]],
-    'kernel_size': [[3, 3, 3], [5, 5, 5], [7, 7, 7]],
-    'filters': [[4, 8, 16], [8, 16, 32]],
-    'dense_layers': [[1024, 512, 64], [1024, 512, 128],
-                     [1024, 256, 64], [1024, 256, 128]]
+    'kernel_size': [[5, 5, 3], [5, 5, 5], [5, 3, 3], [7, 5, 5], [7, 5, 3]],
+    'filters': [[2, 4, 8], [4, 8, 16], [4, 4, 8], [2, 8, 16]],
+    'dense_layers': [[1024, 512, 128]]
 }
 
 
