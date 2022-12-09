@@ -48,7 +48,7 @@ train_cfg = {
 
 param_space = {
     'cropping': [[0, 0]],
-    'dropout': [0.0, 0.1],
+    'dropout': [0.0],
     'kernel_size': [3, 5, 7],
     'filters': [[32, 16, 8, 1],
                 # [64, 32, 16, 1], [128, 64, 32, 1]
