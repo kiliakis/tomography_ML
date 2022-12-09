@@ -66,10 +66,14 @@ model_cfg = {
 }
 
 param_space = {
-    'cropping': [[0, 0], [6, 6], [12, 12]],
-    'kernel_size': [[5, 5, 3], [5, 5, 5], [5, 3, 3], [7, 5, 5], [7, 5, 3]],
-    'filters': [[2, 4, 8], [4, 8, 16], [4, 4, 8], [2, 8, 16]],
-    'dense_layers': [[1024, 512, 128]]
+    'cropping': [[0, 0]],
+    'kernel_size': [[5, 5, 5], [5, 3, 3], [3, 3, 3]],
+    'filters': [[2, 4, 8], [4, 8, 16],
+                [4, 4, 8], [2, 8, 16],
+                [4, 16, 32], [8, 16, 16],
+                [8, 16, 32]],
+    'dense_layers': [[1024, 512, 128], [1024, 256, 128],
+                     [1024, 512, 64], [1024, 256, 64], ]
 }
 
 
@@ -79,15 +83,15 @@ def train_test_model(var_name, x_train, y_train, x_valid, y_valid, hparamdir, hp
     cfg.update(hparams)
 
     model = EncoderSingle(input_shape=input_shape,
-                         output_name=var_name,
-                         **cfg)
+                          output_name=var_name,
+                          **cfg)
 #     weights_dir = os.path.join(hparamdir, 'weights')
     start_t = time.time()
     history = model.model.fit(
-        x=x_train, y=y_train, 
+        x=x_train, y=y_train,
         epochs=cfg['epochs'],
         validation_data=(x_valid, y_valid),
-        callbacks=[], 
+        callbacks=[],
         batch_size=cfg['batch_size'],
         verbose=0)
     total_t = time.time() - start_t
@@ -150,12 +154,12 @@ if __name__ == '__main__':
             print(e)
     else:
         print('No GPU available, using the CPU')
-        
-    
+
     start_t = time.time()
     # Create the datasets
     # 1. Randomly select the training data
-    file_names = sample_files(TRAINING_PATH, train_cfg['dataset%'], keep_every=num_Turns_Case)
+    file_names = sample_files(
+        TRAINING_PATH, train_cfg['dataset%'], keep_every=num_Turns_Case)
     print('Number of Training files: ', len(file_names))
 
     x_train, y_train = encoder_files_to_tensors(
@@ -187,16 +191,18 @@ if __name__ == '__main__':
         print(f'--- Starting trial: {run_name}/{total_runs}')
         print(hparams)
         start_t = time.time()
-        history, loss = train_test_model(var_name, x_train, train, x_valid, valid, os.path.join(trial_dir, run_name), hparams)
+        history, loss = train_test_model(
+            var_name, x_train, train, x_valid, valid, os.path.join(trial_dir, run_name), hparams)
         total_time = time.time() - start_t
         train_loss = np.min(history["loss"])
         valid_loss = np.min(history["val_loss"])
-        overall_dict[run_name] = {'time': total_time, 'train': train_loss, 'valid': valid_loss, 'history': history}
+        overall_dict[run_name] = {
+            'time': total_time, 'train': train_loss, 'valid': valid_loss, 'history': history}
         overall_dict[run_name].update(hparams)
-        print(f'---- Training complete, epochs: {len(history["loss"])}, train loss {np.min(history["loss"]):.2e}, valid loss {np.min(history["val_loss"]):.2e}, total time {total_time} ----')
+        print(
+            f'---- Training complete, epochs: {len(history["loss"])}, train loss {np.min(history["loss"]):.2e}, valid loss {np.min(history["val_loss"]):.2e}, total time {total_time} ----')
 
         session_num += 1
-
 
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     os.makedirs('hparam_dicts', exist_ok=True)
