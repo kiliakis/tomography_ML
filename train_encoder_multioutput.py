@@ -39,7 +39,7 @@ var_names = ['phEr', 'enEr', 'bl',
 
 # Train specific
 train_cfg = {
-    'epochs': 10,
+    'epochs': 50,
     'dense_layers': [16],
     'filters': [8],
     'cropping': [0, 0],
@@ -344,7 +344,7 @@ if __name__ == '__main__':
                     x=x_train, y=models[var_name]['train'], 
                     epochs=train_cfg['epochs'],
                     validation_data=(x_valid, models[var_name]['valid']),
-                    callbacks=[stop_early, save_best], 
+                    callbacks=[save_best], 
                     batch_size=model_cfg[var_name]['batch_size'],
                     verbose=0)
             elif DATA_LOAD_METHOD=='DATASET':
