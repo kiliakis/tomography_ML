@@ -122,8 +122,8 @@ if __name__ == '__main__':
             [tf.float32, tf.float32]))
 
         # cache the dataset
-        train_dataset = train_dataset.cache(
-            os.path.join(cache_dir, 'train_cache'))
+        # train_dataset = train_dataset.cache(
+        #     os.path.join(cache_dir, 'train_cache'))
         # shuffle the dataset
         # train_dataset = train_dataset.shuffle(BUFFER_SIZE, seed=1)
         # batch the dataset
@@ -140,8 +140,8 @@ if __name__ == '__main__':
             [x, train_cfg['normalization']],
             [tf.float32, tf.float32]))
         # cache the dataset
-        valid_dataset = valid_dataset.cache(
-            os.path.join(cache_dir, 'valid_cache'))
+        # valid_dataset = valid_dataset.cache(
+        #     os.path.join(cache_dir, 'valid_cache'))
         # shuffle the dataset
         # valid_dataset = valid_dataset.shuffle(BUFFER_SIZE, seed=1)
         # batch the dataset
