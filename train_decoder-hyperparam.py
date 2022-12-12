@@ -17,7 +17,7 @@ import argparse
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-num_Turns_Case = 10
+num_Turns_Case = 1
 # Initialize parameters
 data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_decoder_02-12-22'
 # data_dir = './tomo_data/datasets'
@@ -41,17 +41,17 @@ train_cfg = {
     'dropout': 0.2,
     'loss': 'mse',
     'lr': 1e-3,
-    'dataset%': 1,
+    'dataset%': 0.1,
     'normalization': 'minmax',
     'batch_size': 32
 }
 
 param_space = {
-    'cropping': [[0, 0]],
     'dropout': [0.0],
     'kernel_size': [3, 5, 7],
-    'filters': [[32, 16, 8, 1],
-                # [64, 32, 16, 1], [128, 64, 32, 1]
+    'filters': [
+        #[32, 16, 8, 1],
+                [64, 32, 16, 1], [128, 64, 32, 1]
                 ],
     'dense_layers': [[8, 64, 1024], [8, 256, 1024],
                      [8, 64, 256, 1024], [8, 32, 256, 1024]]

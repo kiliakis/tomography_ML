@@ -24,7 +24,7 @@ parser.add_argument('-c', '--config', type=str, default=None,
                     help='A yaml configuration file with all training parameters.')
 
 # Initialize parameters
-data_dir = '/eos/user/k/kiliakis/tomo_data/datasets'
+data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_decoder_02-12-22'
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
@@ -36,17 +36,18 @@ additional_latent_dim = 1
 
 # Train specific
 train_cfg = {
-    'epochs': 5,
-    'dense_layers': [latent_dim + additional_latent_dim, 64, 256],
-    'filters': [256, 256, 128, 64, 32, 1],
-    'kernel_size': 3,
+    'epochs': 50,
+    'dense_layers': [latent_dim + additional_latent_dim, 64, 1024],
+    'filters': [32, 16, 8, 1],
+    'kernel_size': 7,
     'strides': [2, 2],
     'final_kernel_size': 3,
     'activation': 'relu',
-    'dropout': 0.2,
+    'dropout': 0.,
     'loss': 'mse',
+    'normalization': 'minmax',
     'lr': 1e-3,
-    'dataset%': 0.001
+    'dataset%': 0.1
 }
 
 if __name__ == '__main__':
@@ -173,7 +174,7 @@ if __name__ == '__main__':
         history = decoder.model.fit(
             train_dataset, epochs=train_cfg['epochs'],
             validation_data=valid_dataset,
-            callbacks=[stop_early, save_best])
+            callbacks=[save_best])
 
         total_time = time.time() - start_time
         print(
