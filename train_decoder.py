@@ -29,7 +29,7 @@ timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
 IMG_OUTPUT_SIZE = 128
-BATCH_SIZE = 128  # 8
+BATCH_SIZE = 32  # 8
 BUFFER_SIZE = 32768
 latent_dim = 7  # 6 + the new VrfSPS
 additional_latent_dim = 1
@@ -125,7 +125,7 @@ if __name__ == '__main__':
         train_dataset = train_dataset.cache(
             os.path.join(cache_dir, 'train_cache'))
         # shuffle the dataset
-        train_dataset = train_dataset.shuffle(BUFFER_SIZE, seed=1)
+        # train_dataset = train_dataset.shuffle(BUFFER_SIZE, seed=1)
         # batch the dataset
         train_dataset = train_dataset.batch(BATCH_SIZE)
 
@@ -143,7 +143,7 @@ if __name__ == '__main__':
         valid_dataset = valid_dataset.cache(
             os.path.join(cache_dir, 'valid_cache'))
         # shuffle the dataset
-        valid_dataset = valid_dataset.shuffle(BUFFER_SIZE, seed=1)
+        # valid_dataset = valid_dataset.shuffle(BUFFER_SIZE, seed=1)
         # batch the dataset
         valid_dataset = valid_dataset.batch(BATCH_SIZE)
 
