@@ -352,7 +352,7 @@ if __name__ == '__main__':
                     models[var_name]['train'], 
                     epochs=train_cfg['epochs'],
                     validation_data=models[var_name]['valid'],
-                    callbacks=[stop_early, save_best],
+                    callbacks=[save_best],
                     verbose=0)
             historyMulti[f'{var_name}_loss'] = history.history['loss']
             historyMulti[f'{var_name}_val_loss'] = history.history['val_loss']

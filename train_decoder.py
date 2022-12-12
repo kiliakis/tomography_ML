@@ -28,9 +28,10 @@ data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_decoder_02-12-22'
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
+DATA_LOAD_METHOD = 'TENSOR'
 IMG_OUTPUT_SIZE = 128
 BATCH_SIZE = 32  # 8
-BUFFER_SIZE = 32768
+# BUFFER_SIZE = 32768
 latent_dim = 7  # 6 + the new VrfSPS
 additional_latent_dim = 1
 
@@ -109,43 +110,63 @@ if __name__ == '__main__':
     try:
         start_t = time.time()
         # Create the datasets
-        # First the training data
-        file_names = sample_files(TRAINING_PATH, train_cfg['dataset%'])
-        print('Training files: ', len(file_names))
-        # convert to dataset
-        train_dataset = tf.data.Dataset.from_tensor_slices(file_names)
-        # Then map function to dataset
-        # this returns pairs of tensors with shape (128, 128, 1) and (8,)
-        train_dataset = train_dataset.map(lambda x: tf.py_function(
-            load_decoder_data,
-            [x, train_cfg['normalization']],
-            [tf.float32, tf.float32]))
+        if DATA_LOAD_METHOD=='TENSOR':
+            # First the training data
+            file_names = sample_files(
+                TRAINING_PATH, train_cfg['dataset%'], keep_every=1)
+            print('Number of Training files: ', len(file_names))
+            x_train, y_train = decoder_files_to_tensors(
+                file_names, normalization=train_cfg['normalization'])
 
-        # cache the dataset
-        # train_dataset = train_dataset.cache(
-        #     os.path.join(cache_dir, 'train_cache'))
-        # shuffle the dataset
-        # train_dataset = train_dataset.shuffle(BUFFER_SIZE, seed=1)
-        # batch the dataset
-        train_dataset = train_dataset.batch(BATCH_SIZE)
+            # Repeat for validation data
+            file_names = sample_files(
+                VALIDATION_PATH, train_cfg['dataset%'], keep_every=1)
+            print('Number of Validation files: ', len(file_names))
 
-        file_names = sample_files(VALIDATION_PATH, train_cfg['dataset%'])
-        print('Validation files: ', len(file_names))
-        # convert to dataset
-        valid_dataset = tf.data.Dataset.from_tensor_slices(file_names)
-        # Then map function to dataset
-        # this returns pairs of tensors with shape (128, 128, 1) and (8,)
-        valid_dataset = valid_dataset.map(lambda x: tf.py_function(
-            load_decoder_data,
-            [x, train_cfg['normalization']],
-            [tf.float32, tf.float32]))
-        # cache the dataset
-        # valid_dataset = valid_dataset.cache(
-        #     os.path.join(cache_dir, 'valid_cache'))
-        # shuffle the dataset
-        # valid_dataset = valid_dataset.shuffle(BUFFER_SIZE, seed=1)
-        # batch the dataset
-        valid_dataset = valid_dataset.batch(BATCH_SIZE)
+            x_valid, y_valid = decoder_files_to_tensors(
+                file_names, normalization=train_cfg['normalization'])
+        elif DATA_LOAD_METHOD=='DATASET':
+            # First the training data
+            file_names = sample_files(
+                TRAINING_PATH, train_cfg['dataset%'], keep_every=1)
+            print('Number of Training files: ', len(file_names))
+
+            # convert to dataset
+            train_dataset = tf.data.Dataset.from_tensor_slices(file_names)
+            # Then map function to dataset
+            # this returns pairs of tensors with shape (128, 128, 1) and (8,)
+            train_dataset = train_dataset.map(lambda x: tf.py_function(
+                load_decoder_data,
+                [x, train_cfg['normalization']],
+                [tf.float32, tf.float32]))
+            # 4. Ignore errors in case they appear
+            train_dataset = train_dataset.apply(
+                tf.data.experimental.ignore_errors())
+            # cache the dataset
+            # train_dataset = train_dataset.cache(
+            #     os.path.join(cache_dir, 'train_cache'))
+            # batch the dataset
+            train_dataset = train_dataset.batch(BATCH_SIZE)
+
+            file_names = sample_files(
+                VALIDATION_PATH, train_cfg['dataset%'], keep_every=1)
+            print('Number of Validation files: ', len(file_names))
+            # convert to dataset
+            valid_dataset = tf.data.Dataset.from_tensor_slices(file_names)
+            # Then map function to dataset
+            # this returns pairs of tensors with shape (128, 128, 1) and (8,)
+            valid_dataset = valid_dataset.map(lambda x: tf.py_function(
+                load_decoder_data,
+                [x, train_cfg['normalization']],
+                [tf.float32, tf.float32]))
+
+            valid_dataset = valid_dataset.apply(
+                tf.data.experimental.ignore_errors())
+            # cache the dataset
+            # valid_dataset = valid_dataset.cache(
+            #     os.path.join(cache_dir, 'valid_cache'))
+            # batch the dataset
+            valid_dataset = valid_dataset.batch(BATCH_SIZE)
 
         end_t = time.time()
         print(
@@ -171,10 +192,22 @@ if __name__ == '__main__':
                                                     monitor='val_loss', save_best_only=True)
 
         start_time = time.time()
-        history = decoder.model.fit(
-            train_dataset, epochs=train_cfg['epochs'],
-            validation_data=valid_dataset,
-            callbacks=[save_best])
+        
+        if DATA_LOAD_METHOD=='TENSOR':
+            history = decoder.model.fit(
+                x=x_train, y=y_train,
+                epochs=train_cfg['epochs'],
+                validation_data=(x_valid, y_valid),
+                callbacks=[save_best],
+                batch_size=BATCH_SIZE,
+                verbose=0)
+        elif DATA_LOAD_METHOD=='DATASET':
+
+            history = decoder.model.fit(
+                train_dataset, epochs=train_cfg['epochs'],
+                validation_data=valid_dataset,
+                callbacks=[save_best],
+                verbose=0)
 
         total_time = time.time() - start_time
         print(
