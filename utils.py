@@ -157,6 +157,28 @@ def unnormalizeTurn(turn_num, maxTurns=300.0):
     return (turn_num+1)*(maxTurns/2)
 
 
+def load_encdec_data(pk_file, normalization, normalize=True):
+    turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
+    T_img = np.reshape(T_img, T_img.shape+(1,))
+    PS = np.reshape(PS, PS.shape+(1,))
+    turn_num = normalizeTurn(turn_num)
+    T_img = normalizeIMG(T_img)
+    PS = normalizeIMG(PS)
+    phEr = float(params_dict['phEr'])
+    enEr = float(params_dict['enEr'])
+    bl = float(params_dict['bl'])
+    inten = float(params_dict['int'])
+    Vrf = float(params_dict['Vrf'])
+    mu = float(params_dict['mu'])
+    VrfSPS = float(params_dict['VrfSPS'])
+    if normalize:
+        phEr, enEr, bl, inten, Vrf, mu, VrfSPS = normalize_params(
+            phEr, enEr, bl, inten, Vrf, mu, VrfSPS, normalization=normalization)
+    # T_normFactor = float(params_dict['T_normFactor'])
+    # B_normFactor = float(params_dict['B_normFactor'])
+    # return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, Vrf, mu, VrfSPS, T_normFactor, B_normFactor
+    return (T_img, turn_num, [phEr, enEr, bl, inten, Vrf, mu, VrfSPS], PS)
+
 def load_encoder_data(pk_file, normalization, normalize=True):
     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
     T_img = np.reshape(T_img, T_img.shape+(1,))
@@ -253,6 +275,27 @@ def load_model_data_old(pk_file):
     T_normFactor = float(params_dict['T_normFactor'])
     B_normFactor = float(params_dict['B_normFactor'])
     return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, T_normFactor, B_normFactor
+
+
+def encdec_files_to_tensors(files, normalize=True, normalization='default'):
+    waterfall_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
+    turn_arr = np.zeros(len(files), dtype=np.float32)
+    latent_arr = np.zeros((len(files), 7), dtype=np.float32)
+    phasespace_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
+    for i, file in enumerate(files):
+        waterfall, turn, latents, ps = load_encdec_data(file,
+                                                        normalize=normalize,
+                                                        normalization=normalization)
+        waterfall_arr[i] = waterfall
+        turn_arr[i] = turn
+        latent_arr[i] = latents
+        phasespace_arr[i] = ps
+    waterfall_arr = tf.convert_to_tensor(waterfall_arr)
+    turn_arr = tf.convert_to_tensor(turn_arr)
+    latent_arr = tf.convert_to_tensor(latent_arr)
+    phasespace_arr = tf.convert_to_tensor(phasespace_arr)
+
+    return waterfall_arr, turn_arr, latent_arr, phasespace_arr
 
 
 def encoder_files_to_tensors(files, normalize=True, normalization='default'):

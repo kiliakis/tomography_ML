@@ -343,6 +343,24 @@ class Decoder(keras.Model):
         return self.decoder(z)
 
 
+class encoderDecoderModel():
+    def __init__(self, encoder, decoder):
+        self.encoder = encoder
+        self.decoder = decoder
+
+    def encode(self, WF):
+        return self.encoder(WF)
+    
+    def decode(self, latent):
+        return self.decoder(latent)
+    
+    def predict(self, WF, turn):
+        latent = self.encoder(WF)
+        # extend latent with turn
+        extendedWF = tf.concat([latent, turn], axis=1)
+        PS = self.decoder(extendedWF)
+        return latent, PS
+
 class extendedCED(keras.Model):
 
     def __init__(self, latent_dim, additional_latent_dim, input_shape, filters,
