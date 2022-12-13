@@ -2,7 +2,7 @@
 
 from models import Encoder
 from utils import sample_files
-from utils import plot_loss, load_encoder_data
+from utils import plot_loss, encoder_files_to_tensors, load_encoder_data
 import time
 import glob
 import tensorflow as tf
@@ -24,39 +24,40 @@ parser.add_argument('-c', '--config', type=str, default=None,
                     help='A yaml configuration file with all training parameters.')
 
 # Initialize parameters
-data_dir = '/eos/user/k/kiliakis/tomo_data/datasets'
+data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_encoder_02-12-22'
 #data_dir = '/eos/kiliakis/tomo_data/datasets'
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
+DATA_LOAD_METHOD = 'TENSOR'  # it can be TENSOR or DATASET
 # Data specific
 IMG_OUTPUT_SIZE = 128
-BATCH_SIZE = 128  # 8
+# BATCH_SIZE = 32  # 8
 # BUFFER_SIZE = 32768
 BUFFER_SIZE = 256
 
 latent_dim = 7  # 6 + the new VrfSPS
-num_Turns_Case = 50+1
+num_Turns_Case = 1
 
 # Train specific
 train_cfg = {
-    'epochs': 5,
-    'dense_layers': [64, latent_dim],
-    'filters': [32, 32],
-    'cropping': [8, 0],
-    'kernel_size': 3,
+    'epochs': 50,
+    'dense_layers': [1024, 256, 64, 7],
+    'filters': [8, 16, 32],
+    'cropping': [0, 0],
+    'kernel_size': 5,
     'strides': [2, 2],
     'activation': 'relu',
     'pooling': None,
     'pooling_size': [0, 0],
     'pooling_strides': [1, 1],
     'pooling_padding': 'valid',
-    'dropout': 0.2,
+    'dropout': 0.0,
     'loss': 'mse',
     'lr': 1e-3,
-    'dataset%': 0.1,
-    'normalization': 'std',
-    'loss_weights': [1, 1, 1, 1, 1, 1, 1]
-
+    'dataset%': 1,
+    'normalization': 'minmax',
+    'loss_weights': [1, 1, 1, 1, 1, 1, 1],
+    'batch_size': 32
 }
 
 if __name__ == '__main__':
@@ -118,59 +119,70 @@ if __name__ == '__main__':
     os.makedirs(cache_dir, exist_ok=True)
     try:
         start_t = time.time()
-        # Create the datasets
-        # 1. Randomly select the training data
-        file_names = sample_files(
-            TRAINING_PATH, train_cfg['dataset%'], keep_every=num_Turns_Case)
-        print('Number of Training files: ', len(file_names))
-        
-        # 2. Convert to tensor dataset
-        train_dataset = tf.data.Dataset.from_tensor_slices(file_names)
-        
-        # 3. Then map function to dataset
-        # this returns pairs of tensors with shape (128, 128, 1) and (7,)
-        train_dataset = train_dataset.map(lambda x: tf.py_function(
-            load_encoder_data,
-            [x, train_cfg['normalization'], True],
-            [tf.float32, tf.float32]))
 
-        # 4. Ignore errors in case they appear
-        train_dataset = train_dataset.apply(tf.data.experimental.ignore_errors())
+        if DATA_LOAD_METHOD == 'TENSOR':
+            # Create the datasets
+            # 1. Randomly select the training data
+            file_names = sample_files(
+                TRAINING_PATH, train_cfg['dataset%'], keep_every=num_Turns_Case)
+            print('Number of Training files: ', len(file_names))
+            x_train, y_train = encoder_files_to_tensors(
+                file_names, normalization=train_cfg['normalization'])
 
-        # 5. Optionally cache the dataset
-        # train_dataset = train_dataset.cache(
-        #     os.path.join(cache_dir, 'train_cache'))
-        # shuffle the dataset
-        # batch the dataset
+            # Repeat for validation data
+            file_names = sample_files(
+                VALIDATION_PATH, train_cfg['dataset%'], keep_every=num_Turns_Case)
+            print('Number of Validation files: ', len(file_names))
 
-        # 6. Divide dataset in batces
-        train_dataset = train_dataset.batch(BATCH_SIZE)
+            x_valid, y_valid = encoder_files_to_tensors(
+                file_names, normalization=train_cfg['normalization'])
+        elif DATA_LOAD_METHOD == 'DATASET':
+            # Create the datasets
+            # 1. Randomly select the training data
+            file_names = sample_files(
+                TRAINING_PATH, train_cfg['dataset%'], keep_every=num_Turns_Case)
+            print('Number of Training files: ', len(file_names))
 
-        # Repeat for validation data
-        file_names = sample_files(
-            VALIDATION_PATH, train_cfg['dataset%'], keep_every=num_Turns_Case)
-        print('Number of Validation files: ', len(file_names))
-        # convert to dataset
-        valid_dataset = tf.data.Dataset.from_tensor_slices(file_names)
-        # Then map function to dataset
-        # this returns pairs of tensors with shape (128, 128, 1) and (7,)
-        valid_dataset = valid_dataset.map(lambda x: tf.py_function(
-            load_encoder_data,
-            [x, train_cfg['normalization'], True],
-            [tf.float32, tf.float32]))
-        # Ignore errors
-        valid_dataset = valid_dataset.apply(
-            tf.data.experimental.ignore_errors())
+            # 2. Convert to tensor dataset
+            train_dataset = tf.data.Dataset.from_tensor_slices(file_names)
 
-        # cache the dataset
-        # valid_dataset = valid_dataset.cache(
-        #     os.path.join(cache_dir, 'valid_cache'))
-        # batch the dataset
-        valid_dataset = valid_dataset.batch(BATCH_SIZE)
+            # 3. Then map function to dataset
+            # this returns pairs of tensors with shape (128, 128, 1) and (7,)
+            train_dataset = train_dataset.map(lambda x: tf.py_function(
+                load_encoder_data,
+                [x, train_cfg['normalization'], True],
+                [tf.float32, tf.float32]))
 
-        end_t = time.time()
+            # 4. Ignore errors in case they appear
+            train_dataset = train_dataset.apply(
+                tf.data.experimental.ignore_errors())
+
+            # 5. Optionally cache the dataset
+            # train_dataset = train_dataset.cache(
+            #     os.path.join(cache_dir, 'train_cache'))
+
+            # Repeat for validation data
+            file_names = sample_files(
+                VALIDATION_PATH, train_cfg['dataset%'], keep_every=num_Turns_Case)
+            print('Number of Validation files: ', len(file_names))
+            # convert to dataset
+            valid_dataset = tf.data.Dataset.from_tensor_slices(file_names)
+            # Then map function to dataset
+            # this returns pairs of tensors with shape (128, 128, 1) and (7,)
+            valid_dataset = valid_dataset.map(lambda x: tf.py_function(
+                load_encoder_data,
+                [x, train_cfg['normalization'], True],
+                [tf.float32, tf.float32]))
+            # Ignore errors
+            valid_dataset = valid_dataset.apply(
+                tf.data.experimental.ignore_errors())
+
+            # cache the dataset
+            # valid_dataset = valid_dataset.cache(
+            #     os.path.join(cache_dir, 'valid_cache'))
+
         print(
-            f'\n---- Input files have been read, elapsed: {end_t - start_t} ----\n')
+            f'\n---- Input files have been read, elapsed: {time.time() - start_t} ----\n')
 
         start_t = time.time()
         # Model instantiation
@@ -194,11 +206,21 @@ if __name__ == '__main__':
                                                     monitor='val_loss', save_best_only=True)
 
         start_time = time.time()
-        history = encoder.model.fit(
-            train_dataset, epochs=train_cfg['epochs'],
-            validation_data=valid_dataset,
-            callbacks=[stop_early, save_best],
-            verbose=0)
+        if DATA_LOAD_METHOD == 'TENSOR':
+            history = encoder.model.fit(
+                x=x_train, y=y_train,
+                epochs=train_cfg['epochs'],
+                validation_data=(x_valid, y_valid),
+                callbacks=[save_best],
+                batch_size=train_cfg['batch_size'],
+                verbose=0)
+        elif DATA_LOAD_METHOD == 'DATASET':
+            history = encoder.model.fit(
+                train_dataset,
+                epochs=train_cfg['epochs'],
+                validation_data=valid_dataset,
+                callbacks=[save_best],
+                verbose=0)
 
         total_time = time.time() - start_time
         print(

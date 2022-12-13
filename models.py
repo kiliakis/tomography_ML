@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 from utils import normalize_params
+import os
 
 
 class EncoderSingle():
@@ -20,7 +21,7 @@ class EncoderSingle():
         if isinstance(kernel_size, int):
             kernel_size = [kernel_size] * len(filters)
         assert len(kernel_size) == len(filters)
-        
+
         # set the input size
         inputs = keras.Input(shape=input_shape, name='Input')
         # crop the edges
@@ -49,7 +50,7 @@ class EncoderSingle():
         for i, layer in enumerate(dense_layers):
             # Add the layer
             x = keras.layers.Dense(layer, activation=activation,
-                                    name=f'{output_name}_Dense_{i+1}')(x)
+                                   name=f'{output_name}_Dense_{i+1}')(x)
             # Add dropout optionally
             if dropout > 0 and dropout < 1:
                 x = keras.layers.Dropout(
@@ -64,6 +65,7 @@ class EncoderSingle():
         model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
         self.model = model
+
 
 class EncoderMulti():
     # Pooling can be None, or 'Average' or 'Max'
@@ -92,7 +94,8 @@ class EncoderMulti():
         # set the input size
         inputs = keras.Input(shape=input_shape, name='Input')
         # crop the edges
-        cropped = keras.layers.Cropping2D(cropping=cropping, name='Crop')(inputs)
+        cropped = keras.layers.Cropping2D(
+            cropping=cropping, name='Crop')(inputs)
         self.models = {}
         # Generate multiple models, one for each output
         for var_name in output_names:
@@ -137,6 +140,7 @@ class EncoderMulti():
     @tf.function
     def encode(self, x):
         return self.model(x)
+
 
 class EncoderFunc():
     # Pooling can be None, or 'Average' or 'Max'
@@ -344,22 +348,52 @@ class Decoder(keras.Model):
 
 
 class encoderDecoderModel():
-    def __init__(self, encoder, decoder):
-        self.encoder = encoder
-        self.decoder = decoder
+    var_names = ['phEr', 'enEr', 'bl',
+                 'inten', 'Vrf', 'mu',
+                 'VrfSPS']
+
+    def __init__(self, enc_weights_dir, dec_weights_dir):
+        # The encoder weights are in a single file called decoder.h5
+        if 'decoder.h5' in os.listdir(dec_weights_dir):
+            self.decoder = keras.models.load_model(
+                os.path.join(dec_weights_dir, 'decoder.h5'))
+        else:
+            print(f'Error, decoder.h5 not found in {dec_weights_dir}')
+            exit(-1)
+        # The encoder weights are either in a single file called encoder.h5
+        if 'encoder.h5' in os.listdir(enc_weights_dir):
+            self.encoder = keras.models.load_model(
+                os.path.join(enc_weights_dir, 'encoder.h5'))
+        else:
+            # or in multiple files, one per latent space variable
+            models = []
+            for var in encoderDecoderModel.var_names:
+                fname = f'encoder_{var}.h5'
+                if fname in os.listdir(enc_weights_dir):
+                    models.append(keras.models.load_model(
+                        os.path.join(enc_weights_dir, fname)))
+                else:
+                    print(f'Error, {fname} not found in {enc_weights_dir}')
+                    exit(-1)
+            self.encoder = models
 
     def encode(self, WF):
-        return self.encoder(WF)
-    
-    def decode(self, latent):
-        return self.decoder(latent)
-    
-    def predict(self, WF, turn):
-        latent = self.encoder(WF)
-        # extend latent with turn
-        extendedWF = tf.concat([latent, turn], axis=1)
-        PS = self.decoder(extendedWF)
+        if isinstance(self.encoder, list):
+            latents = tf.concat([m(WF) for m in self.encoder], axis=1)
+        else:
+            latents = self.encoder(WF)
+        return latents
+
+    def decode(self, latent, turn):
+        turn = tf.reshape(turn, [-1, 1])
+        extended = tf.concat([latent, turn], axis=1)
+        return self.decoder(extended)
+
+    def predictPS(self, WF, turn):
+        latent = self.encode(WF)
+        PS = self.decode(latent, turn)
         return latent, PS
+
 
 class extendedCED(keras.Model):
 
