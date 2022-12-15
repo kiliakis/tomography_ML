@@ -7,7 +7,7 @@ import argparse
 
 submission_system = 'condor'
 USERNAME = 'kiliakis'
-RUNTIME = 8          # in hours
+RUNTIME = 10          # in hours
 USE_GPU = 1          # request for a gpu node
 CPU_CORES = 1        # number of CPU cores
 if submission_system == 'condor':
@@ -18,133 +18,158 @@ if submission_system == 'condor':
 else:
     print('Invalid submission system')
     exit()
-ENCODER_SCRIPT='train_encoder_multioutput.py'
+ENCODER_SCRIPT = 'train_encoder_multioutput.py'
 DECODER_SCRIPT = 'train_decoder.py'
 
 TRIALS_DIR = os.path.join(PROJECT_DIR, 'trials')
 
 configs = [
 
-    {
-        'encoder': {
-            'epochs': 50,
-            'dense_layers': [1024, 256, 32],
-            'filters': [4, 8],
-            'cropping': [0, 0],
-            'kernel_size': [5, 3],
-            'strides': [2, 2],
-            'activation': 'relu',
-            'pooling': None, 'pooling_size': [2, 2],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-            'dropout': 0.0,
-            'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 1,
-            'normalization': 'minmax',
-            'loss_weights': [0, 1, 2, 3, 4, 5, 6]
-        },
-        'model_cfg': {
-            'phEr': {
-                'dropout': 0.,
-                'filters': [8, 16, 32]
-            }
-        }
-    },
-
-    {
-        'encoder': {
-            'epochs': 50,
-            'dense_layers': [1024, 256, 32],
-            'filters': [8],
-            'cropping': [0, 0],
-            'kernel_size': [3, 3],
-            'strides': [2, 2],
-            'activation': 'relu',
-            'pooling': None, 'pooling_size': [2, 2],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-            'dropout': 0.0,
-            'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 1,
-            'normalization': 'minmax',
-            'loss_weights': [0, 1, 2, 3, 4, 5, 6]
-        },
-        'model_cfg': {
-            'phEr': {
-                'dropout': 0.,
-                'filters': [8, 16, 32]
-            }
-        }
-    },
-
-
-    {
-        'encoder': {
-            'epochs': 50,
-            'dense_layers': [1024, 256, 32],
-            'filters': [4, 8],
-            'cropping': [0, 0],
-            'kernel_size': [3, 3],
-            'strides': [2, 2],
-            'activation': 'relu',
-            'pooling': None, 'pooling_size': [2, 2],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-            'dropout': 0.0,
-            'loss': 'mse', 'lr': 1e-3,
-            'dataset%': 1,
-            'normalization': 'minmax',
-            'loss_weights': [0, 1, 2, 3, 4, 5, 6]
-        },
-        'model_cfg': {
-            'phEr': {
-                'dropout': 0.,
-                'filters': [8, 16, 32]
-            }
-        }
-    },
-
-
-  # {
-    #     'decoder': {
-    #         'epochs': 100,
-    #         'dense_layers': [8, 512],
-    #         'filters': [256, 64, 32, 1],
-    #         'kernel_size': 3, 
+    # {
+    #     'encoder': {
+    #         'epochs': 50,
+    #         'dense_layers': [1024, 256, 32],
+    #         'filters': [4, 8],
+    #         'cropping': [0, 0],
+    #         'kernel_size': [5, 3],
     #         'strides': [2, 2],
-    #         'final_kernel_size': 3,
     #         'activation': 'relu',
+    #         'pooling': None, 'pooling_size': [2, 2],
+    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
     #         'dropout': 0.0,
     #         'loss': 'mse', 'lr': 1e-3,
-    #         'dataset%': 1.0
+    #         'dataset%': 1,
+    #         'normalization': 'minmax',
+    #         'loss_weights': [0, 1, 2, 3, 4, 5, 6]
     #     },
-    # },
-    # {
-    #     'decoder': {
-    #         'epochs': 100,
-    #         'dense_layers': [8, 512],
-    #         'filters': [256, 64, 32, 1],
-    #         'kernel_size': 3,
-    #         'strides': [2, 2],
-    #         'final_kernel_size': 3,
-    #         'activation': 'relu',
-    #         'dropout': 0.0,
-    #         'loss': 'mse', 'lr': 2e-3,
-    #         'dataset%': 1.0
-    #     },
-    # },
-    # {
-    #     'decoder': {
-    #         'epochs': 100,
-    #         'dense_layers': [8, 512],
-    #         'filters': [256, 64, 32, 1],
-    #         'kernel_size': 3,
-    #         'strides': [2, 2],
-    #         'final_kernel_size': 3,
-    #         'activation': 'relu',
-    #         'dropout': 0.0,
-    #         'loss': 'mse', 'lr': 5e-3,
-    #         'dataset%': 1.0
-    #     },
+    #     'model_cfg': {
+    #         'phEr': {
+    #             'dropout': 0.,
+    #             'filters': [8, 16, 32]
+    #         }
+    #     }
     # },
 
+    # {
+    #     'encoder': {
+    #         'epochs': 50,
+    #         'dense_layers': [1024, 256, 32],
+    #         'filters': [8],
+    #         'cropping': [0, 0],
+    #         'kernel_size': [3, 3],
+    #         'strides': [2, 2],
+    #         'activation': 'relu',
+    #         'pooling': None, 'pooling_size': [2, 2],
+    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+    #         'dropout': 0.0,
+    #         'loss': 'mse', 'lr': 1e-3,
+    #         'dataset%': 1,
+    #         'normalization': 'minmax',
+    #         'loss_weights': [0, 1, 2, 3, 4, 5, 6]
+    #     },
+    #     'model_cfg': {
+    #         'phEr': {
+    #             'dropout': 0.,
+    #             'filters': [8, 16, 32]
+    #         }
+    #     }
+    # },
+
+
+    # {
+    #     'encoder': {
+    #         'epochs': 50,
+    #         'dense_layers': [1024, 256, 32],
+    #         'filters': [4, 8],
+    #         'cropping': [0, 0],
+    #         'kernel_size': [3, 3],
+    #         'strides': [2, 2],
+    #         'activation': 'relu',
+    #         'pooling': None, 'pooling_size': [2, 2],
+    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+    #         'dropout': 0.0,
+    #         'loss': 'mse', 'lr': 1e-3,
+    #         'dataset%': 1,
+    #         'normalization': 'minmax',
+    #         'loss_weights': [0, 1, 2, 3, 4, 5, 6]
+    #     },
+    #     'model_cfg': {
+    #         'phEr': {
+    #             'dropout': 0.,
+    #             'filters': [8, 16, 32]
+    #         }
+    #     }
+    # },
+
+    {
+        'decoder': {
+            'epochs': 60,
+            'dense_layers': [8, 64, 1024],
+            'filters': [32, 16, 8, 1],
+            'kernel_size': 7,
+            'activation': 'tanh',
+            'strides': [2, 2],
+            'final_kernel_size': 5,
+            'final_activation': 'linear',
+            'dropout': 0.0,
+            'loss': 'mse', 
+            'lr': 1e-3,
+            'dataset%': 0.1,
+            'normalization': 'minmax'
+        },
+    },
+    {
+        'decoder': {
+            'epochs': 60,
+            'dense_layers': [8, 64, 1024],
+            'filters': [32, 16, 8, 1],
+            'kernel_size': 7,
+            'activation': 'tanh',
+            'strides': [2, 2],
+            'final_kernel_size': 5,
+            'final_activation': 'tanh',
+            'dropout': 0.0,
+            'loss': 'mse', 
+            'lr': 1e-3,
+            'dataset%': 0.1,
+            'normalization': 'minmax',
+        },
+    },
+
+    # {
+    #     'decoder': {
+    #         'epochs': 60,
+    #         'dense_layers': [8, 64, 1024],
+    #         'filters': [32, 16, 8, 1],
+    #         'kernel_size': 7,
+    #         'activation': 'relu',
+    #         'strides': [2, 2],
+    #         'final_kernel_size': 3,
+    #         'final_activation': 'linear',
+    #         'dropout': 0.0,
+    #         'loss': 'mse',
+    #         'lr': 1e-3,
+    #         'dataset%': 0.25,
+    #         'normalization': 'minmax'
+    #     },
+    # },
+    # {
+    #     'decoder': {
+    #         'epochs': 60,
+    #         'dense_layers': [8, 64, 1024],
+    #         'filters': [32, 16, 8, 1],
+    #         'kernel_size': 7,
+    #         'activation': 'relu',
+    #         'strides': [2, 2],
+    #         'final_kernel_size': 7,
+    #         'final_activation': 'linear',
+    #         'dropout': 0.0,
+    #         'loss': 'mse',
+    #         'lr': 1e-3,
+    #         'dataset%': 0.25,
+    #         'normalization': 'minmax',
+    #     },
+    # },
 ]
 
 parser = argparse.ArgumentParser(description='Submit multiple train trials in htcondor',

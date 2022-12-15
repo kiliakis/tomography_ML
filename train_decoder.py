@@ -37,13 +37,14 @@ additional_latent_dim = 1
 
 # Train specific
 train_cfg = {
-    'epochs': 50,
+    'epochs': 100,
     'dense_layers': [latent_dim + additional_latent_dim, 64, 1024],
     'filters': [32, 16, 8, 1],
     'kernel_size': 7,
     'strides': [2, 2],
-    'final_kernel_size': 3,
+    'final_kernel_size': 5,
     'activation': 'relu',
+    'final_activation': 'tanh',
     'dropout': 0.,
     'loss': 'mse',
     'normalization': 'minmax',

@@ -154,7 +154,7 @@ def normalizeTurn(turn_num, maxTurns=300.0):
 
 
 def unnormalizeTurn(turn_num, maxTurns=300.0):
-    return (turn_num+1)*(maxTurns/2)
+    return np.round((turn_num+1)*(maxTurns/2), 0)
 
 
 def load_encdec_data(pk_file, normalization, normalize=True):
