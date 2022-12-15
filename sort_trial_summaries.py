@@ -31,7 +31,7 @@ parser.add_argument('-u', '--update', action='store_true',
 
 def extract_trials(reg_expr_indir):
     header = ['model', 'vld_ls', 'trn_ls', 'epoch', 'data',
-              'filters', 'kernels', 'dense', 'activ', 'dropout', 
+              'filters', 'kernels', 'dense', 'activ', 'dropout',
               'pooling', 'crop', 'lr', 'gpu', 'time', 'date']
     rows = []
     alldirs = glob.glob(reg_expr_indir)
@@ -45,23 +45,30 @@ def extract_trials(reg_expr_indir):
                 with open(os.path.join(dirs, file)) as f:
                     summary = yaml.load(f, Loader=yaml.FullLoader)
                 for k, v in summary.items():
+                    model = k[:3]
                     date = os.path.basename(dirs)
-                    kernels = f'{v.get("kernel_size", 3), v.get("strides", 2)}'
+                    kernels = f'{v.get("kernel_size", 3)}, {v.get("strides", 2)}'
                     pooling = f'{v.get("pooling", 0), v.get("pooling_size", 0), v.get("pooling_strides", 0), v.get("pooling_padding", 0)}'
                     filters = '-'.join(map(str, v.get('filters', [0])))
                     dense = '-'.join(map(str, v.get('dense_layers', [0])))
                     crop = '-'.join(map(str, v.get('cropping', [0, 0])))
-
+                    activation = v.get('activation', 'linear')
+                    if model == 'dec':
+                        final_kernel_size = v.get('final_kernel_size', 3)
+                        final_activation = v.get('final_activation', 'linear')
+                        kernels = f'{v.get("kernel_size", 3)}-{final_kernel_size}, {v.get("strides", 2)}'
+                        activation = f'{activation}-{final_activation}'
                     # date = date.replace('-', '').replace('_', '', 2)
-                    row = [k[:3], f'{v.get("min_valid_loss", 0):.2e}', f'{v.get("min_train_loss", 0):.2e}',
-                        str(v.get('epochs', 0)), str(v.get('dataset%', 0)), filters, kernels,
-                        dense, v.get('activation', 0), str(v.get('dropout', 0)), pooling, crop,
-                        str(v.get('lr', 0)), str(v.get('used_gpus', 0)), f'{v.get("total_train_time", 0):.1f}',
-                        date]
+                    row = [model, f'{v.get("min_valid_loss", 0):.2e}', f'{v.get("min_train_loss", 0):.2e}',
+                           str(v.get('epochs', 0)), str(v.get('dataset%', 0)), filters,
+                           kernels, dense, activation, str(v.get('dropout', 0)),
+                           pooling, crop, str(v.get('lr', 0)), str(v.get('used_gpus', 0)),
+                           f'{v.get("total_train_time", 0):.1f}', date]
                     rows.append(row)
-    
+
     rows = sorted(rows, key=lambda a: (a[0], float(a[1]), float(a[2])))
     return header, rows
+
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -79,7 +86,7 @@ if __name__ == '__main__':
     encode_t = PrettyTable(header)
     encode_t.align = 'l'
     encode_t.border = False
-    
+
     decode_t = PrettyTable(header)
     decode_t.align = 'l'
     decode_t.border = False
@@ -91,7 +98,7 @@ if __name__ == '__main__':
         if 'dec' in r[0]:
             r = [r[i] for i in idx]
             decode_t.add_row(r)
-    
+
     if args.rows > 0:
         print(encode_t[:args.rows])
     else:
@@ -110,7 +117,7 @@ if __name__ == '__main__':
                 reader = csv.reader(f, delimiter='\t')
                 # make sure the header is the same
                 file_header = next(reader)
-                assert header==file_header
+                assert header == file_header
                 # convert to set to remove duplicates
                 rows = ['@'.join(row) for row in rows]
                 rows = set(rows)
@@ -125,4 +132,3 @@ if __name__ == '__main__':
             writer = csv.writer(f, delimiter='\t')
             writer.writerow(header)
             writer.writerows(rows)
-

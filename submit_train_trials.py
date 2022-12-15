@@ -7,7 +7,7 @@ import argparse
 
 submission_system = 'condor'
 USERNAME = 'kiliakis'
-RUNTIME = 10          # in hours
+RUNTIME = 12          # in hours
 USE_GPU = 1          # request for a gpu node
 CPU_CORES = 1        # number of CPU cores
 if submission_system == 'condor':
@@ -103,39 +103,38 @@ configs = [
 
     {
         'decoder': {
-            'epochs': 60,
-            'dense_layers': [8, 64, 1024],
+            'epochs': 100,
+            'dense_layers': [8, 256, 1024],
             'filters': [32, 16, 8, 1],
             'kernel_size': 7,
-            'activation': 'tanh',
-            'strides': [2, 2],
-            'final_kernel_size': 5,
-            'final_activation': 'linear',
-            'dropout': 0.0,
-            'loss': 'mse', 
-            'lr': 1e-3,
-            'dataset%': 0.1,
-            'normalization': 'minmax'
-        },
-    },
-    {
-        'decoder': {
-            'epochs': 60,
-            'dense_layers': [8, 64, 1024],
-            'filters': [32, 16, 8, 1],
-            'kernel_size': 7,
-            'activation': 'tanh',
+            'activation': 'relu',
             'strides': [2, 2],
             'final_kernel_size': 5,
             'final_activation': 'tanh',
             'dropout': 0.0,
             'loss': 'mse', 
             'lr': 1e-3,
-            'dataset%': 0.1,
+            'dataset%': 0.5,
+            'normalization': 'minmax'
+        },
+    },
+    {
+        'decoder': {
+            'epochs': 100,
+            'dense_layers': [8, 512, 2048],
+            'filters': [32, 16, 8, 1],
+            'kernel_size': 7,
+            'activation': 'relu',
+            'strides': [2, 2],
+            'final_kernel_size': 5,
+            'final_activation': 'tanh',
+            'dropout': 0.0,
+            'loss': 'mse', 
+            'lr': 1e-3,
+            'dataset%': 0.5,
             'normalization': 'minmax',
         },
     },
-
     # {
     #     'decoder': {
     #         'epochs': 60,

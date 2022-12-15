@@ -10,6 +10,14 @@ import re
 import glob
 
 
+def get_best_model_timestamp(path, model='enc'):
+    from sort_trial_summaries import extract_trials
+    header, rows = extract_trials(path)
+    for row in rows:
+        if model in row[header.index('model')]:
+            return row[header.index('date')]
+
+
 def plot_loss(lines, title='', figname=None):
     plt.figure()
     plt.title(title)
@@ -26,49 +34,6 @@ def plot_loss(lines, title='', figname=None):
     if figname:
         plt.savefig(figname, dpi=300)
         plt.close()
-
-
-def get_cmap(path=''):
-
-    if path == '':
-        path = os.path.realpath(
-            'C:\\Users\\teoarg\\cernbox\\python\\myFunctions')
-
-    cmap_white_blue_red_import = np.loadtxt(
-        os.path.join(path, 'colormap\\colormap.txt'))
-    cmap_white_blue_red_interparray = np.array(np.linspace(
-        0., 1., len(cmap_white_blue_red_import[:, 0])), ndmin=2)
-    cmap_white_blue_red_red = np.hstack((cmap_white_blue_red_interparray.T, np.array(
-        cmap_white_blue_red_import[:, 0], ndmin=2).T, np.array(cmap_white_blue_red_import[:, 0], ndmin=2).T))
-    cmap_white_blue_red_green = np.hstack((cmap_white_blue_red_interparray.T, np.array(
-        cmap_white_blue_red_import[:, 1], ndmin=2).T, np.array(cmap_white_blue_red_import[:, 1], ndmin=2).T))
-    cmap_white_blue_red_blue = np.hstack((cmap_white_blue_red_interparray.T, np.array(
-        cmap_white_blue_red_import[:, 2], ndmin=2).T, np.array(cmap_white_blue_red_import[:, 2], ndmin=2).T))
-
-    cmap_white_blue_red_red = tuple(map(tuple, cmap_white_blue_red_red))
-    cmap_white_blue_red_green = tuple(map(tuple, cmap_white_blue_red_green))
-    cmap_white_blue_red_blue = tuple(map(tuple, cmap_white_blue_red_blue))
-
-    cdict_white_blue_red = {'red': cmap_white_blue_red_red,
-                            'green': cmap_white_blue_red_green, 'blue': cmap_white_blue_red_blue}
-
-    cmap_white_blue_red = LinearSegmentedColormap(
-        'WhiteBlueRed', cdict_white_blue_red)
-
-    return cmap_white_blue_red
-
-
-def running_mean(x, N):
-
-    if np.ndim(x) == 2:
-        moving_average = np.zeros(np.shape(x))
-        for i in np.arange(np.shape(x)[1]):
-            moving_average[:, i] = np.convolve(
-                x[:, i], np.ones((N,))/N, mode='same')
-    else:
-        moving_average = np.convolve(x, np.ones((N,))/N, mode='same')
-
-    return moving_average
 
 
 def extract_data_Fromfolder(fn, simulations_dir, IMG_OUTPUT_SIZE, zeropad, start_turn, skipturns, version=3):
@@ -179,6 +144,7 @@ def load_encdec_data(pk_file, normalization, normalize=True):
     # return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, Vrf, mu, VrfSPS, T_normFactor, B_normFactor
     return (T_img, turn_num, [phEr, enEr, bl, inten, Vrf, mu, VrfSPS], PS)
 
+
 def load_encoder_data(pk_file, normalization, normalize=True):
     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
     T_img = np.reshape(T_img, T_img.shape+(1,))
@@ -241,40 +207,6 @@ def load_model_data_new(pk_file):
     T_normFactor = float(params_dict['T_normFactor'])
     B_normFactor = float(params_dict['B_normFactor'])
     return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, Vrf, mu, VrfSPS, T_normFactor, B_normFactor
-
-
-def load_model_data(pk_file):
-    turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
-    T_img = np.reshape(T_img, T_img.shape+(1,))
-    PS = np.reshape(PS, PS.shape+(1,))
-    turn_num = normalizeTurn(turn_num)
-    T_img = normalizeIMG(T_img)
-    PS = normalizeIMG(PS)
-    phEr = float(params_dict['phEr'])
-    enEr = float(params_dict['enEr'])
-    bl = float(params_dict['bl'])
-    inten = float(params_dict['int'])
-    Vrf = float(params_dict['Vrf'])
-    mu = float(params_dict['mu'])
-    T_normFactor = float(params_dict['T_normFactor'])
-    B_normFactor = float(params_dict['B_normFactor'])
-    return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, Vrf, mu, T_normFactor, B_normFactor
-
-
-def load_model_data_old(pk_file):
-    turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
-    T_img = np.reshape(T_img, T_img.shape+(1,))
-    PS = np.reshape(PS, PS.shape+(1,))
-    turn_num = normalizeTurn(turn_num)
-    T_img = normalizeIMG(T_img)
-    PS = normalizeIMG(PS)
-    phEr = float(params_dict['phEr'])
-    enEr = float(params_dict['enEr'])
-    bl = float(params_dict['bl'])
-    inten = float(params_dict['int'])
-    T_normFactor = float(params_dict['T_normFactor'])
-    B_normFactor = float(params_dict['B_normFactor'])
-    return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, T_normFactor, B_normFactor
 
 
 def encdec_files_to_tensors(files, normalize=True, normalization='default'):
@@ -483,19 +415,25 @@ def unnormalize_params(phErs, enErs, bls, intens, Vrf, mu, VrfSPS,
             minmax_unnormalize_param(VrfSPS, VrfSPS_min, VrfSPS_max)
 
 
-def assess_model(model, turn_normalized, T_image, PS_image, epoch=None):
-    #    predictions, _ = model.predictPS(T_image, turn_normalized, training = False)
-    predictions, _ = model.predictPS(T_image, turn_normalized)
+def assess_model(predictions, turn_normalized, T_image, PS_image,
+                 plots_dir='./plots', savefig=False):
     for i in range(predictions.shape[0]):
-        turn = unnormalizeTurn(turn_normalized[i])
+        turn = int(unnormalizeTurn(turn_normalized[i]))
         f, ax = plt.subplots(2, 3)
-        ax[0, 0].imshow(T_image[i, :, :, 0],  vmin=-1, vmax=1)
-        ax[0, 0].set_title(
-            'T prof' if epoch is None else 'Ep {} T prof'.format(epoch))
-        ax[0, 1].imshow(PS_image[i, :, :, 0], vmin=-1, vmax=1)
-        ax[0, 1].set_title('Ep {} PS @ {}'.format(epoch, int(turn)))
-        ax[0, 2].imshow(predictions[i, :, :, 0], vmin=-1, vmax=1)
-        ax[0, 2].set_title('Ep {} PREDICTION @ {}'.format(epoch, int(turn)))
+        ax[0, 0].imshow(T_image[i, :, :, 0],  vmin=-1, vmax=1, cmap='jet')
+        ax[0, 0].set_title('T prof')
+        ax[0, 0].set_xticks([], [])
+        ax[0, 0].set_yticks([], [])
+        ax[0, 1].imshow(PS_image[i, :, :, 0], vmin=-1, vmax=1, cmap='jet')
+        ax[0, 1].set_title('PS @ {}'.format(turn))
+        ax[0, 1].set_xticks([], [])
+        ax[0, 1].set_yticks([], [])
+
+        ax[0, 2].imshow(predictions[i, :, :, 0], vmin=-1, vmax=1, cmap='jet')
+        ax[0, 2].set_title('PREDICTION @ {}'.format(turn))
+        ax[0, 2].set_xticks([], [])
+        ax[0, 2].set_yticks([], [])
+
         ax[1, 1].plot(np.sum(PS_image[i, :, :, 0], 0), label='Target')
         ax[1, 1].plot(np.sum(predictions[i, :, :, 0], 0), label='Prediction')
         ax[1, 1].legend()
@@ -505,23 +443,25 @@ def assess_model(model, turn_normalized, T_image, PS_image, epoch=None):
         ax[1, 2].legend()
         ax[1, 2].set_title('Energy Projection')
         f.delaxes(ax[1, 0])
-        plt.show()
+        plt.tight_layout()
+        if savefig:
+            plt.savefig(os.path.join(
+                plots_dir, f'assess_model_turn{turn}.jpg'), dpi=400)
+        else:
+            plt.show()
+        plt.close()
 
 
-def assess_decoder(model, turn_normalized, PS_image, phEr, enEr, bl, inten, Vrf,
-                   mu, VrfSPS, epoch=None, figname='assess_decoder.png', savefig=False):
-
-    norm_pars = tf.expand_dims(tf.transpose(tf.convert_to_tensor(
-        normalize_params(phEr, enEr, bl, inten, Vrf, mu, VrfSPS))), axis=0)
-    predictions = model.decode(model.extend(norm_pars, turn_normalized))
+def assess_decoder(predictions, turn_normalized, PS_image,
+                   plots_dir='./plots', savefig=False):
 
     for i in range(predictions.shape[0]):
-        turn = unnormalizeTurn(turn_normalized[i])
+        turn = int(unnormalizeTurn(turn_normalized[i]))
         f, ax = plt.subplots(2, 2)
-        ax[0, 0].imshow(PS_image[i, :, :, 0], vmin=-1, vmax=1)
-        ax[0, 0].set_title('Ep {} PS @ {}'.format(epoch, turn))
-        ax[0, 1].imshow(predictions[i, :, :, 0], vmin=-1, vmax=1)
-        ax[0, 1].set_title('Ep {} PREDICTION @ {}'.format(epoch, turn))
+        ax[0, 0].imshow(PS_image[i, :, :, 0], vmin=-1, vmax=1, cmap='jet')
+        ax[0, 0].set_title('PS @ {}'.format(turn))
+        ax[0, 1].imshow(predictions[i, :, :, 0], vmin=-1, vmax=1, cmap='jet')
+        ax[0, 1].set_title('PREDICTION @ {}'.format(turn))
         ax[1, 0].plot(np.sum(PS_image[i, :, :, 0], 0), label='Target')
         ax[1, 0].plot(np.sum(predictions[i, :, :, 0], 0), label='Prediction')
         ax[1, 0].legend()
@@ -532,7 +472,8 @@ def assess_decoder(model, turn_normalized, PS_image, phEr, enEr, bl, inten, Vrf,
         ax[1, 1].set_title('Energy Projection')
         plt.tight_layout()
         if savefig:
-            plt.savefig(figname, dpi=300)
+            plt.savefig(os.path.join(
+                plots_dir, f'assess_decoder_turn{turn}.jpg'), dpi=400)
         else:
             plt.show()
         plt.close()
@@ -626,16 +567,17 @@ def filterFileNamesInFolder(data_path, filter_text=['']):
     return fNames
 
 
-def normalize(vec):
-    return vec/np.max(vec)
+def running_mean(x, N):
 
+    if np.ndim(x) == 2:
+        moving_average = np.zeros(np.shape(x))
+        for i in np.arange(np.shape(x)[1]):
+            moving_average[:, i] = np.convolve(
+                x[:, i], np.ones((N,))/N, mode='same')
+    else:
+        moving_average = np.convolve(x, np.ones((N,))/N, mode='same')
 
-def get_best_model_timestamp(path, model='enc'):
-    from sort_trial_summaries import extract_trials
-    header, rows = extract_trials(path)
-    for row in rows:
-        if model in row[header.index('model')]:
-            return row[header.index('date')]
+    return moving_average
 
 
 def conv2D_output_size(input_size, out_channels, padding, kernel_size, stride,
