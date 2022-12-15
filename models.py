@@ -67,6 +67,73 @@ class EncoderSingle():
 
         self.model = model
 
+    @tf.function
+    def encode(self, waterfall):
+        latent = self.model(waterfall)
+        return latent
+
+    def load(self, weights_dir):
+        self.model = keras.models.load_model(
+            os.path.join(weights_dir, f'encoder_{self.output_name}.h5')
+        )
+
+
+class EncoderMulti():
+    var_names = ['phEr', 'enEr', 'bl',
+                 'inten', 'Vrf', 'mu',
+                 'VrfSPS']
+
+    def __init__(self, enc_weights_dir=None, enc_list=None):
+        if enc_weights_dir:
+            if 'encoder.h5' in os.listdir(enc_weights_dir):
+                self.model = keras.models.load_model(
+                    os.path.join(enc_weights_dir, 'encoder.h5'))
+            else:
+                # or in multiple files, one per latent space variable
+                models = []
+                for var in self.var_names:
+                    fname = f'encoder_{var}.h5'
+                    if fname in os.listdir(enc_weights_dir):
+                        models.append(keras.models.load_model(
+                            os.path.join(enc_weights_dir, fname)))
+                    else:
+                        print(f'Error, {fname} not found in {enc_weights_dir}')
+                        exit(-1)
+                self.model = models
+        elif enc_list:
+            self.model = enc_list
+
+    def encode(self, waterfall, unnormalize=False, normalization='minmax'):
+        if isinstance(self.model, list):
+            latent = tf.concat([m(waterfall)
+                               for m in self.model], axis=1)
+        else:
+            latent = self.model(waterfall)
+        if unnormalize:
+            latent = unnormalize_params(
+                latent[:, 0], latent[:, 1], latent[:, 2],
+                latent[:, 3], latent[:, 4], latent[:, 5],
+                latent[:, 6], normalization=normalization)
+            latent = np.array(latent).T
+        return latent
+
+    def load(self, weights_dir):
+        if 'encoder.h5' in os.listdir(weights_dir):
+            self.model = keras.models.load_model(
+                os.path.join(weights_dir, 'encoder.h5'))
+        else:
+            # or in multiple files, one per latent space variable
+            models = []
+            for var in self.var_names:
+                fname = f'encoder_{var}.h5'
+                if fname in os.listdir(weights_dir):
+                    models.append(keras.models.load_model(
+                        os.path.join(weights_dir, fname)))
+                else:
+                    print(f'Error, {fname} not found in {weights_dir}')
+                    exit(-1)
+            self.model = models
+
 
 class Encoder(keras.Model):
     # Pooling can be None, or 'Average' or 'Max'
@@ -131,8 +198,8 @@ class Encoder(keras.Model):
                            loss_weights=loss_weights)
 
     @tf.function
-    def encode(self, x):
-        return self.model(x)
+    def encode(self, waterfall):
+        return self.model(waterfall)
 
 
 def customActivation1(x):
@@ -140,7 +207,8 @@ def customActivation1(x):
 
 
 class Decoder(keras.Model):
-    def __init__(self, output_shape, dense_layers, filters,
+    def __init__(self, output_shape=(128, 128, 1), dense_layers=[8, 64, 1024],
+                 filters=[32, 16, 8, 1],
                  kernel_size=3, strides=[2, 2],
                  activation='relu', final_kernel_size=3,
                  final_activation='linear',
@@ -214,17 +282,31 @@ class Decoder(keras.Model):
         self.model.compile(optimizer=optimizer, loss=loss)
 
     @tf.function
-    def decode(self, z):
-        return self.decoder(z)
+    def decode(self, latent, turn, unnormalize=False):
+        turn = tf.reshape(turn, [-1, 1])
+        extended = tf.concat([turn, latent], axis=1)
+        PS = self.decoder(extended)
+        if unnormalize:
+            PS = unnormalizeIMG(PS)
+        return PS
+
+    def load(self, weights_dir):
+        # The encoder weights are in a single file called decoder.h5
+        if 'decoder.h5' in os.listdir(weights_dir):
+            self.decoder = keras.models.load_model(
+                os.path.join(weights_dir, 'decoder.h5'),
+                compile=False)
+            optimizer = keras.optimizers.Adam(learning_rate=1e-3)
+            self.decoder.compile(optimizer=optimizer, loss='mse')
+        else:
+            print(f'Error, decoder.h5 not found in {weights_dir}')
+            exit(-1)
 
 
 class encoderDecoderModel():
-    var_names = ['phEr', 'enEr', 'bl',
-                 'inten', 'Vrf', 'mu',
-                 'VrfSPS']
-
     def __init__(self, enc_weights_dir, dec_weights_dir):
-        # The encoder weights are in a single file called decoder.h5
+        self.encoder = EncoderMulti(enc_weights_dir)
+
         if 'decoder.h5' in os.listdir(dec_weights_dir):
             self.decoder = keras.models.load_model(
                 os.path.join(dec_weights_dir, 'decoder.h5'),
@@ -234,43 +316,12 @@ class encoderDecoderModel():
         else:
             print(f'Error, decoder.h5 not found in {dec_weights_dir}')
             exit(-1)
-        # The encoder weights are either in a single file called encoder.h5
-        if 'encoder.h5' in os.listdir(enc_weights_dir):
-            self.encoder = keras.models.load_model(
-                os.path.join(enc_weights_dir, 'encoder.h5'))
-        else:
-            # or in multiple files, one per latent space variable
-            models = []
-            for var in encoderDecoderModel.var_names:
-                fname = f'encoder_{var}.h5'
-                if fname in os.listdir(enc_weights_dir):
-                    models.append(keras.models.load_model(
-                        os.path.join(enc_weights_dir, fname)))
-                else:
-                    print(f'Error, {fname} not found in {enc_weights_dir}')
-                    exit(-1)
-            self.encoder = models
 
     def encode(self, WF, unnormalize=False, normalization='minmax'):
-        if isinstance(self.encoder, list):
-            latent = tf.concat([m(WF) for m in self.encoder], axis=1)
-        else:
-            latent = self.encoder(WF)
-        if unnormalize:
-            latent = unnormalize_params(
-                latent[:, 0], latent[:, 1], latent[:, 2],
-                latent[:, 3], latent[:, 4], latent[:, 5],
-                latent[:, 6], normalization=normalization)
-            latent = np.array(latent).T
-        return latent
+        return self.encoder.encode(WF, unnormalize, normalization)
 
     def decode(self, latent, turn, unnormalize=False):
-        turn = tf.reshape(turn, [-1, 1])
-        extended = tf.concat([turn, latent], axis=1)
-        PS = self.decoder(extended)
-        if unnormalize:
-            PS = unnormalizeIMG(PS)
-        return PS
+        return self.decoder.decode(latent, turn, unnormalize)
 
     def predictPS(self, WF, turn, unnormalize=False, normalization='minmax'):
         latent = self.encode(WF)
