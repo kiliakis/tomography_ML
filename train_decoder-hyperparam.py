@@ -19,9 +19,8 @@ import matplotlib as mpl
 
 num_Turns_Case = 1
 # Initialize parameters
-data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_decoder_02-12-22'
-# data_dir = './tomo_data/datasets'
-# timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+# data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_decoder_02-12-22'
+data_dir = './tomo_data/datasets_decoder_02-12-22'
 
 IMG_OUTPUT_SIZE = 128
 BATCH_SIZE = 32  # 8

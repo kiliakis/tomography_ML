@@ -24,7 +24,9 @@ parser.add_argument('-c', '--config', type=str, default=None,
                     help='A yaml configuration file with all training parameters.')
 
 # Initialize parameters
-data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_decoder_02-12-22'
+# data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_decoder_02-12-22'
+data_dir = './tomo_data/datasets_decoder_02-12-22'
+
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
@@ -49,7 +51,7 @@ train_cfg = {
     'loss': 'mse',
     'normalization': 'minmax',
     'lr': 1e-3,
-    'dataset%': 0.1
+    'dataset%': 0.5
 }
 
 if __name__ == '__main__':
