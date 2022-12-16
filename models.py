@@ -143,11 +143,13 @@ class Encoder(keras.Model):
                  pooling=None, pooling_size=[2, 2],
                  pooling_strides=[1, 1], pooling_padding='valid',
                  dropout=0.0, learning_rate=0.002, loss='mse',
-                 loss_weights=None,
                  **kwargs):
         super(Encoder, self).__init__()
         self.latent_dim = dense_layers[-1]
         self.inputShape = input_shape
+        if isinstance(kernel_size, int):
+            kernel_size = [kernel_size] * len(filters)
+        assert len(kernel_size) == len(filters)
 
         # The encoder consumes the input and produces the latents features
         # Which are 7: phEr, enEr, bl, inten, Vrf, mu, VrfSPS
@@ -164,7 +166,7 @@ class Encoder(keras.Model):
         for i, f in enumerate(filters):
             # Add the Convolution
             self.model.add(keras.layers.Conv2D(
-                filters=f, kernel_size=kernel_size, strides=strides,
+                filters=f, kernel_size=kernel_size[i], strides=strides,
                 activation=activation, name=f'CNN_{i+1}'))
             # Optional pooling after the convolution
             if pooling == 'Max':
@@ -194,8 +196,7 @@ class Encoder(keras.Model):
 
         # Also initialize the optimizer and compile the model
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
-        self.model.compile(optimizer=optimizer, loss=loss,
-                           loss_weights=loss_weights)
+        self.model.compile(optimizer=optimizer, loss=loss)
 
     @tf.function
     def encode(self, waterfall):
