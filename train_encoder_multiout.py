@@ -27,7 +27,8 @@ parser.add_argument('-c', '--config', type=str, default=None,
 
 # Initialize parameters
 # data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_encoder_02-12-22'
-data_dir = './tomo_data/datasets_encoder_02-12-22'
+# data_dir = './tomo_data/datasets_encoder_02-12-22'
+data_dir = './tomo_data/datasets_encoder_TF_16-12-22'
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
