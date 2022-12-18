@@ -18,7 +18,7 @@ if submission_system == 'condor':
 else:
     print('Invalid submission system')
     exit()
-ENCODER_SCRIPT = 'train_encoder_multioutput.py'
+ENCODER_SCRIPT = 'train_encoder_multiout.py'
 DECODER_SCRIPT = 'train_decoder.py'
 
 TRIALS_DIR = os.path.join(PROJECT_DIR, 'trials')
