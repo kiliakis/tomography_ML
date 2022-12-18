@@ -36,7 +36,62 @@ def plot_loss(lines, title='', figname=None):
         plt.close()
 
 
-def extract_data_Fromfolder(fn, simulations_dir, IMG_OUTPUT_SIZE, zeropad, start_turn, skipturns, version=3):
+def calc_bin_centers(cut_left, cut_right, n_slices):
+    edges = np.linspace(cut_left, cut_right, n_slices + 1)
+    bin_centers = (edges[:-1] + edges[1:])/2
+    return bin_centers
+
+
+def loadTF(path, beam=1, cut=52):
+    path = path.format(beam)
+    h5file = hp.File(path, 'r')
+    freq_array = np.array(h5file["/TransferFunction/freq"])
+    TF_array = np.array(h5file["/TransferFunction/TF"])
+    h5file.close()
+    # TF_array = fitTF(freq_array,TF_array)
+    filt = (20*np.log10(np.abs(TF_array)) < -cut) & (TF_array > 0)
+    TF_array[filt] *= 10**(-cut/20.0) / np.abs(TF_array[filt])
+    return freq_array, TF_array
+
+
+def bunchProfile_TFconvolve(frames, timeScale, freq_array, TF_array):
+    Nframes = frames.shape[1]
+    frames_corr = np.zeros(frames.shape)
+    noints0 = timeScale.shape[0]
+    time = timeScale
+    dt = time[1] - time[0]
+    # Extending the time array to improve the deconvolution (usefull for bew bunch acquisitions)
+    if noints0 < 40000:  # correspomds to 1MHz resolution, then improve it
+        time = np.arange(time.min(), time.max() + 100e-9, dt)
+
+    # Recalculate the number of points and the frequency array
+    noints = time.shape[0]
+    freq = np.fft.fftfreq(noints, d=dt)
+    #  interpolate to the frequency array
+    TF = np.interp(freq, np.fft.fftshift(freq_array), np.fft.fftshift(TF_array.real)) + \
+        1j * np.interp(freq, np.fft.fftshift(freq_array),
+                       np.fft.fftshift(TF_array.imag))
+
+    for i in range(Nframes):
+        profile = frames[:, i]
+        profile = profile - profile[0:10].mean()
+        profile = np.concatenate((profile, np.zeros(time.shape[0] - noints0)))
+
+        # Convolution
+        filtered_f = np.fft.fft(profile) * TF
+        filtered = np.fft.ifft(filtered_f).real
+
+        filtered -= filtered[0:10].mean()
+        filtered *= np.max(profile)/np.max(filtered)
+        frames_corr[:, i] = filtered[:frames.shape[0]]
+        time_corr = time[:frames.shape[0]]
+
+    return time_corr, frames_corr
+
+
+def extract_data_Fromfolder(fn, simulations_dir, IMG_OUTPUT_SIZE, zeropad,
+                            start_turn, skipturns, version=3,
+                            time_scale=None, freq_array=None, TF_array=None):
 
     if version <= 2:
         pattern_string = 'phEr(?P<phEr>.+)_enEr(?P<enEr>.+)_bl(?P<bl>.+)_int(?P<int>.+)'
@@ -50,8 +105,19 @@ def extract_data_Fromfolder(fn, simulations_dir, IMG_OUTPUT_SIZE, zeropad, start
     E_img = np.zeros((IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE))
     T_img = np.zeros((IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE))
     with hp.File(os.path.join(os.path.join(simulations_dir, fn), 'saved_result.hdf5'), 'r') as sf:
-        BunchProfiles = np.array(sf['bunchProfiles']) / \
-            sf['columns'][0][3]*paramsDict['int']
+        BunchProfiles = np.array(sf['bunchProfiles'])
+        # fig = plt.figure()
+        # plt.plot(time_scale, BunchProfiles[:, 0], label='before_tf')
+        if (time_scale is not None) and (freq_array is not None) and (TF_array is not None):
+            _, BunchProfiles = bunchProfile_TFconvolve(BunchProfiles, time_scale,
+                                                       freq_array, TF_array)
+
+        # plt.plot(time_scale, BunchProfiles[:, 0], label='after_tf')
+        # plt.legend()
+        # plt.savefig('plots/profile_before_after_tf.jpg', dpi=400)
+        # plt.close()
+        BunchProfiles /= sf['columns'][0][3]*paramsDict['int']
+
         EnergyProfiles = np.array(
             sf['energyProfiles'])/sf['columns'][0][3]*paramsDict['int']
         phaseSpace_density_array = np.array(sf['phaseSpace_density_array'])
