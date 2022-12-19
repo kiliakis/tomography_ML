@@ -25,7 +25,9 @@ parser.add_argument('-c', '--config', type=str, default=None,
 
 # Initialize parameters
 # data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_decoder_02-12-22'
-data_dir = './tomo_data/datasets_decoder_02-12-22'
+# data_dir = './tomo_data/datasets_decoder_02-12-22'
+data_dir = './tomo_data/datasets_decoder_TF_16-12-22'
+
 
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
@@ -108,7 +110,7 @@ if __name__ == '__main__':
     os.makedirs(trial_dir, exist_ok=True)
     os.makedirs(weights_dir, exist_ok=True)
     os.makedirs(plots_dir, exist_ok=True)
-    os.makedirs(cache_dir, exist_ok=True)
+    # os.makedirs(cache_dir, exist_ok=True)
 
     try:
         start_t = time.time()
