@@ -37,7 +37,7 @@ configs = [
             'lr': 1e-3,
             'dataset%': 1,
             'normalization': 'minmax',
-            'loss_weights': [0, 1, 2, 3, 4, 5, 6],
+            'loss_weights': [6],
             'batch_size': 32
         },
         'model_cfg': {
@@ -78,10 +78,10 @@ configs = [
                 'dense_layers': [1024, 256, 32],
             },
             'VrfSPS': {
-                'cropping': [6, 6],
-                'filters': [8, 16, 32],
+                'cropping': [0, 0],
+                'filters': [4, 8, 16],
                 'kernel_size': [5, 5, 5],
-                'dense_layers': [1024, 256, 32],
+                'dense_layers': [1024, 256, 64],
             },
         }
     },
