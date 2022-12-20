@@ -216,7 +216,7 @@ class Decoder(keras.Model):
                  **kwargs):
         super(Decoder, self).__init__()
         assert filters[-1] == 1
-        assert dense_layers[0] == 8
+        # assert dense_layers[0] == 8
 
         # I calculate the dimension if I was moving:
         # output_shape --> filter[-1] --> filter[-2] .. filter[0]

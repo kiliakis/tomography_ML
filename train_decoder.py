@@ -30,13 +30,14 @@ data_dir = './tomo_data/datasets_decoder_TF_16-12-22'
 
 
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+var_names = ['turn', 'phEr', 'enEr', 'bl', 'inten', 'Vrf', 'mu', 'VrfSPS']
 
 # Data specific
 DATA_LOAD_METHOD = 'TENSOR'
 IMG_OUTPUT_SIZE = 128
 BATCH_SIZE = 32  # 8
 # BUFFER_SIZE = 32768
-latent_dim = 7  # 6 + the new VrfSPS
+latent_dim = 6  # 6 + the new VrfSPS - inten
 additional_latent_dim = 1
 
 # Train specific
@@ -53,7 +54,8 @@ train_cfg = {
     'loss': 'mse',
     'normalization': 'minmax',
     'lr': 1e-3,
-    'dataset%': 0.5
+    'dataset%': 0.5,
+    'loss_weights': [0, 1, 2, 3, 5, 6, 7],
 }
 
 if __name__ == '__main__':
@@ -130,6 +132,15 @@ if __name__ == '__main__':
 
             x_valid, y_valid = decoder_files_to_tensors(
                 file_names, normalization=train_cfg['normalization'])
+            
+            # drop column from y_train, y_valid
+            x_train = tf.concat([tf.expand_dims(tf.gather(x_train, i, axis=1), axis=1)
+                                for i in train_cfg['loss_weights']], -1)
+            print('x_train shape: ', x_train.shape)
+
+            x_valid = tf.concat([tf.expand_dims(tf.gather(x_valid, i, axis=1), axis=1)
+                                for i in train_cfg['loss_weights']], -1)
+            print('x_valid shape: ', x_valid.shape)
         elif DATA_LOAD_METHOD=='DATASET':
             # First the training data
             file_names = sample_files(

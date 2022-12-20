@@ -88,7 +88,7 @@ configs = [
     {
         'decoder': {
             'epochs': 100,
-            'dense_layers': [8, 256, 1024],
+            'dense_layers': [7, 256, 1024],
             'filters': [32, 16, 8, 1],
             'kernel_size': 7,
             'activation': 'relu',
@@ -99,13 +99,15 @@ configs = [
             'loss': 'mse', 
             'lr': 1e-3,
             'dataset%': 0.5,
-            'normalization': 'minmax'
+            'normalization': 'minmax',
+            'loss_weights': [0, 1, 2, 3, 5, 6, 7],
+
         },
     },
     {
         'decoder': {
             'epochs': 100,
-            'dense_layers': [8, 256, 1024],
+            'dense_layers': [7, 256, 1024],
             'filters': [32, 16, 8, 1],
             'kernel_size': 7,
             'activation': 'relu',
@@ -116,7 +118,8 @@ configs = [
             'loss': 'mse', 
             'lr': 1e-3,
             'dataset%': 0.6,
-            'normalization': 'minmax'
+            'normalization': 'minmax',
+            'loss_weights': [0, 1, 2, 3, 5, 6, 7],
         },
     },
     # {
