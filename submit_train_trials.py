@@ -238,6 +238,7 @@ if __name__ == '__main__':
         with open(SHELL_SCRIPT, 'w') as f:
             f.write(f"#!/bin/bash\n\n")
             f.write(f"# Make sure right paths are used\n")
+            f.write(f'source $HOME/.bashrc\n')
             f.write(f"{PYTHON} --version\n")
             f.write("lscpu \n")
             f.write(f"cd {PROJECT_DIR}\n")
