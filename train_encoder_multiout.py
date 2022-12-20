@@ -2,7 +2,6 @@
 
 
 import time
-import glob
 import tensorflow as tf
 from tensorflow import keras
 import yaml
@@ -12,8 +11,8 @@ import numpy as np
 from datetime import datetime
 import argparse
 # import matplotlib.pyplot as plt
-# import matplotlib as mpl
-# mpl.use('Agg')
+import matplotlib as mpl
+mpl.use('Agg')
 
 from models import EncoderSingle
 from utils import sample_files, plot_loss, load_encoder_data
@@ -383,12 +382,11 @@ if __name__ == '__main__':
         print(valid_loss_l)
 
         plot_loss({'training': train_loss_l, 'validation': valid_loss_l},
-                  title='Encoder Train/Validation Loss',
-                  figname=os.path.join(plots_dir, 'encoder_train_valid_loss.png'))
+                title='Encoder Train/Validation Loss',
+                figname=os.path.join(plots_dir, 'encoder_train_valid_loss.png'))
 
         plot_loss(historyMulti, title='Encoder loss per output',
-                  figname=os.path.join(plots_dir, 'encoder_per_output_loss.png'))
-
+                figname=os.path.join(plots_dir, 'encoder_per_output_loss.png'))
         print('\n---- Saving a summary ----\n')
 
         # save file with experiment configuration
