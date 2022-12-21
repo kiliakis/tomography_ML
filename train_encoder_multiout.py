@@ -152,14 +152,14 @@ model_cfg = {
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # best VrfSPS config --> 1.18e-03 val loss
+    # best VrfSPS config --> 9.5e-04 val loss
     'VrfSPS': {
         'epochs': 60,
-        'cropping': [0, 0],
-        'filters': [2, 4, 8],
+        'cropping': [6, 6],
+        'filters': [8, 16, 32],
         'kernel_size': [5, 5, 5],
         'strides': [2, 2],
-        'dense_layers': [1024, 512, 128],
+        'dense_layers': [1024, 256, 32],
         'activation': 'relu',
         'pooling': None,
         'dropout': 0.0,

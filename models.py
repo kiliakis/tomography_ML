@@ -285,7 +285,7 @@ class Decoder(keras.Model):
     def decode(self, latent, turn, unnormalize=False):
         turn = tf.reshape(turn, [-1, 1])
         extended = tf.concat([turn, latent], axis=1)
-        PS = self.decoder(extended)
+        PS = self.model(extended)
         if unnormalize:
             PS = unnormalizeIMG(PS)
         return PS
@@ -293,11 +293,11 @@ class Decoder(keras.Model):
     def load(self, weights_dir):
         # The encoder weights are in a single file called decoder.h5
         if 'decoder.h5' in os.listdir(weights_dir):
-            self.decoder = keras.models.load_model(
+            self.model = keras.models.load_model(
                 os.path.join(weights_dir, 'decoder.h5'),
                 compile=False)
             optimizer = keras.optimizers.Adam(learning_rate=1e-3)
-            self.decoder.compile(optimizer=optimizer, loss='mse')
+            self.model.compile(optimizer=optimizer, loss='mse')
         else:
             print(f'Error, decoder.h5 not found in {weights_dir}')
             exit(-1)
