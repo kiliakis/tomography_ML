@@ -603,12 +603,13 @@ def getTimgForModelFromDataFile_new(fname, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_
 def real_files_to_tensors(data_dir, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=128, zeropad=14, start_turn=1, skipturns=3, centroid_offset=0):
     files = os.listdir(data_dir)
     waterfall_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
-
+    file_list = []
     for i, file in enumerate(files):
         fname = os.path.join(data_dir, file)
         waterfall = getTimgForModelFromDataFile_new(fname)
         waterfall_arr[i] = waterfall
-    return waterfall_arr
+        file_list.append(file.split['.npy'][0])
+    return waterfall_arr, file_list
     
 def fwhm(x, y, level=0.5):
     offset_level = np.mean(y[0:10])
