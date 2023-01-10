@@ -187,6 +187,11 @@ def normalizeTurn(turn_num, maxTurns=300.0):
 def unnormalizeTurn(turn_num, maxTurns=300.0):
     return np.round((turn_num+1)*(maxTurns/2), 0)
 
+def minMaxScaleIMG(X, feature_range=(0,1)):
+    min_val = np.min(X)
+    max_val = np.max(X)
+    scale = (feature_range[1] - feature_range[0]) / (max_val - min_val)
+    return scale * (X-min_val) + feature_range[0]    
 
 def load_encdec_data(pk_file, normalization, normalize=True):
     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
@@ -545,39 +550,66 @@ def assess_decoder(predictions, turn_normalized, PS_image,
         plt.close()
 
 
-def getTimeProfiles_FromData(fname, Ib):
+# def getTimeProfiles_FromData(fname, Ib):
+#     with open(fname, 'rb') as f:
+#         timeScale_for_tomo = np.load(f)
+#         BunchProfiles = np.load(f)
+#     BunchProfiles = BunchProfiles*Ib/np.sum(BunchProfiles[:, 0])
+#     return timeScale_for_tomo, BunchProfiles
+
+
+
+# def getTimeProfiles_FromData_2(fname, Ib):
+#     with hp.File(fname, 'r') as sf:
+#         BunchProfiles = np.array(sf['bunchProfiles'])
+#         EnergyProfiles = np.array(sf['energyProfiles'])
+#         phaseSpace_density_array = np.array(sf['phaseSpace_density_array'])
+#         x_bin_center_array = np.array(sf['x_bin_center_array'])
+#         y_bin_center_array = np.array(sf['y_bin_center_array'])
+#     with open(fname, 'rb') as f:
+#         timeScale_for_tomo = np.load(f)
+#         BunchProfiles = np.load(f)
+#     BunchProfiles = BunchProfiles*Ib/np.sum(BunchProfiles[:, 0])
+#     return timeScale_for_tomo, BunchProfiles
+
+
+# def getTimgForModelFromDataFile(fname, Ib, T_normFactor, IMG_OUTPUT_SIZE, zeropad, start_turn, skipturns, centroid_offset=0):
+#     timeScale_for_tomo, BunchProfiles = getTimeProfiles_FromData(fname, Ib)
+#     BunchProfiles = BunchProfiles/T_normFactor
+#     sel_turns = np.arange(start_turn, skipturns *
+#                           (IMG_OUTPUT_SIZE-2*zeropad), skipturns).astype(np.int32)
+#     T_img = np.pad(BunchProfiles[:, sel_turns], ((zeropad-centroid_offset, zeropad +
+#                                                   centroid_offset), (zeropad, zeropad)), 'constant', constant_values=(0, 0))
+#     T_img_ForModel = normalizeIMG(np.reshape(T_img, T_img.shape+(1,)))
+#     return T_img_ForModel
+
+def getTimeProfiles_FromData_new(fname, Ib):
     with open(fname, 'rb') as f:
         timeScale_for_tomo = np.load(f)
         BunchProfiles = np.load(f)
-    BunchProfiles = BunchProfiles*Ib/np.sum(BunchProfiles[:, 0])
+    BunchProfiles = BunchProfiles*Ib
     return timeScale_for_tomo, BunchProfiles
 
-
-def getTimeProfiles_FromData_2(fname, Ib):
-    with hp.File(fname, 'r') as sf:
-        BunchProfiles = np.array(sf['bunchProfiles'])
-        EnergyProfiles = np.array(sf['energyProfiles'])
-        phaseSpace_density_array = np.array(sf['phaseSpace_density_array'])
-        x_bin_center_array = np.array(sf['x_bin_center_array'])
-        y_bin_center_array = np.array(sf['y_bin_center_array'])
-    with open(fname, 'rb') as f:
-        timeScale_for_tomo = np.load(f)
-        BunchProfiles = np.load(f)
-    BunchProfiles = BunchProfiles*Ib/np.sum(BunchProfiles[:, 0])
-    return timeScale_for_tomo, BunchProfiles
-
-
-def getTimgForModelFromDataFile(fname, Ib, T_normFactor, IMG_OUTPUT_SIZE, zeropad, start_turn, skipturns, centroid_offset=0):
-    timeScale_for_tomo, BunchProfiles = getTimeProfiles_FromData(fname, Ib)
+def getTimgForModelFromDataFile_new(fname, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=128, zeropad=14, start_turn=1, skipturns=3, centroid_offset=0):
+    timeScale_for_tomo, BunchProfiles = getTimeProfiles_FromData_new(fname, Ib)
     BunchProfiles = BunchProfiles/T_normFactor
     sel_turns = np.arange(start_turn, skipturns *
                           (IMG_OUTPUT_SIZE-2*zeropad), skipturns).astype(np.int32)
     T_img = np.pad(BunchProfiles[:, sel_turns], ((zeropad-centroid_offset, zeropad +
                                                   centroid_offset), (zeropad, zeropad)), 'constant', constant_values=(0, 0))
-    T_img_ForModel = normalizeIMG(np.reshape(T_img, T_img.shape+(1,)))
+    T_img_ForModel = minMaxScaleIMG(np.reshape(T_img, T_img.shape+(1,)))
     return T_img_ForModel
 
+def real_files_to_tensors(data_dir, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=128, zeropad=14, start_turn=1, skipturns=3, centroid_offset=0):
+    files = os.listdir(data_dir)
+    waterfall_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
 
+    for i, file in enumerate(files):
+        fname = os.path.join(data_dir, file)
+        waterfall = getTimgForModelFromDataFile_new(fname)
+        waterfall_arr[i] = waterfall
+    return waterfall_arr
+    
 def fwhm(x, y, level=0.5):
     offset_level = np.mean(y[0:10])
     amp = np.max(y) - offset_level
