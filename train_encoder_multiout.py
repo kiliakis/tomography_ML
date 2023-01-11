@@ -55,6 +55,7 @@ train_cfg = {
     'lr': 1e-3,
     'dataset%': 1,
     'normalization': 'minmax',
+    'img_normalize': 'minmax',
     # 'loss_weights': [0, 1, 2, 3, 4, 5, 6],
     'loss_weights': [1],
 
@@ -240,7 +241,8 @@ if __name__ == '__main__':
                 TRAINING_PATH, train_cfg['dataset%'], keep_every=num_Turns_Case)
             print('Number of Training files: ', len(file_names))
             x_train, y_train = encoder_files_to_tensors(
-                file_names, normalization=train_cfg['normalization'])
+                file_names, normalization=train_cfg['normalization'],
+                img_normalize=train_cfg['img_normalize'])
 
             # Repeat for validation data
             file_names = sample_files(
@@ -248,7 +250,8 @@ if __name__ == '__main__':
             print('Number of Validation files: ', len(file_names))
 
             x_valid, y_valid = encoder_files_to_tensors(
-                file_names, normalization=train_cfg['normalization'])
+                file_names, normalization=train_cfg['normalization'],
+                img_normalize=train_cfg['img_normalize'])
         elif DATA_LOAD_METHOD=='DATASET':
             # Create the datasets
             # 1. Randomly select the training data
@@ -263,7 +266,7 @@ if __name__ == '__main__':
             # this returns pairs of tensors with shape (128, 128, 1) and (7,)
             train_dataset = train_dataset.map(lambda x: tf.py_function(
                 load_encoder_data,
-                [x, train_cfg['normalization'], True],
+                [x, train_cfg['normalization'], True, train_cfg['img_normalize']],
                 [tf.float32, tf.float32]))
 
             # 4. Ignore errors in case they appear
@@ -284,7 +287,7 @@ if __name__ == '__main__':
             # this returns pairs of tensors with shape (128, 128, 1) and (7,)
             valid_dataset = valid_dataset.map(lambda x: tf.py_function(
                 load_encoder_data,
-                [x, train_cfg['normalization'], True],
+                [x, train_cfg['normalization'], True, train_cfg['img_normalize']],
                 [tf.float32, tf.float32]))
             # Ignore errors
             valid_dataset = valid_dataset.apply(

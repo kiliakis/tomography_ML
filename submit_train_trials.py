@@ -7,7 +7,7 @@ import argparse
 
 submission_system = 'condor'
 USERNAME = 'kiliakis'
-RUNTIME = 4          # in hours
+RUNTIME = 8          # in hours
 USE_GPU = 1          # request for a gpu node
 CPU_CORES = 1        # number of CPU cores
 if submission_system == 'condor':
@@ -37,7 +37,8 @@ configs = [
             'lr': 1e-3,
             'dataset%': 1,
             'normalization': 'minmax',
-            'loss_weights': [6],
+            'img_normalize': 'minmax',
+            'loss_weights': [0, 1, 2, 3, 4, 5, 6],
             'batch_size': 32
         },
         'model_cfg': {
@@ -72,16 +73,16 @@ configs = [
                 'dense_layers': [1024, 256, 64],
             },
             'mu': {
-                'cropping': [6, 6],
+                'cropping': [0, 0],
                 'filters': [8, 16, 32],
                 'kernel_size': [5, 5, 5],
-                'dense_layers': [1024, 256, 32],
+                'dense_layers': [1024, 256, 64],
             },
             'VrfSPS': {
                 'cropping': [0, 0],
-                'filters': [4, 8, 16],
+                'filters': [2, 4, 8],
                 'kernel_size': [5, 5, 5],
-                'dense_layers': [1024, 256, 64],
+                'dense_layers': [1024, 512, 128],
             },
         }
     },

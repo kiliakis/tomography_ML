@@ -191,15 +191,18 @@ def minMaxScaleIMG(X, feature_range=(0,1)):
     min_val = np.min(X)
     max_val = np.max(X)
     scale = (feature_range[1] - feature_range[0]) / (max_val - min_val)
-    return scale * (X-min_val) + feature_range[0]    
+    return scale * (X-min_val) + feature_range[0]
 
-def load_encdec_data(pk_file, normalization, normalize=True):
+def load_encdec_data(pk_file, normalization, normalize=True, img_normalize='default'):
     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
     T_img = np.reshape(T_img, T_img.shape+(1,))
     PS = np.reshape(PS, PS.shape+(1,))
     turn_num = normalizeTurn(turn_num)
-    T_img = normalizeIMG(T_img)
-    PS = normalizeIMG(PS)
+    if img_normalize=='default':
+        T_img = normalizeIMG(T_img)
+    elif img_normalize=='minmax':
+        T_img = minMaxScaleIMG(T_img)
+
     phEr = float(params_dict['phEr'])
     enEr = float(params_dict['enEr'])
     bl = float(params_dict['bl'])
@@ -216,12 +219,16 @@ def load_encdec_data(pk_file, normalization, normalize=True):
     return (T_img, turn_num, [phEr, enEr, bl, inten, Vrf, mu, VrfSPS], PS)
 
 
-def load_encoder_data(pk_file, normalization, normalize=True):
+def load_encoder_data(pk_file, normalization, normalize=True, img_normalize='default'):
     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
     T_img = np.reshape(T_img, T_img.shape+(1,))
     # PS = np.reshape(PS, PS.shape+(1,))
     # turn_num = normalizeTurn(turn_num)
-    T_img = normalizeIMG(T_img)
+    if img_normalize=='default':
+        T_img = normalizeIMG(T_img)
+    elif img_normalize=='minmax':
+        T_img = minMaxScaleIMG(T_img)
+
     # PS = normalizeIMG(PS)
     phEr = float(params_dict['phEr'])
     enEr = float(params_dict['enEr'])
@@ -280,7 +287,7 @@ def load_model_data_new(pk_file):
     return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, Vrf, mu, VrfSPS, T_normFactor, B_normFactor
 
 
-def encdec_files_to_tensors(files, normalize=True, normalization='default'):
+def encdec_files_to_tensors(files, normalize=True, normalization='default', img_normalize='default'):
     waterfall_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
     turn_arr = np.zeros(len(files), dtype=np.float32)
     latent_arr = np.zeros((len(files), 7), dtype=np.float32)
@@ -288,7 +295,8 @@ def encdec_files_to_tensors(files, normalize=True, normalization='default'):
     for i, file in enumerate(files):
         waterfall, turn, latents, ps = load_encdec_data(file,
                                                         normalize=normalize,
-                                                        normalization=normalization)
+                                                        normalization=normalization,
+                                                        img_normalize=img_normalize)
         waterfall_arr[i] = waterfall
         turn_arr[i] = turn
         latent_arr[i] = latents
@@ -301,12 +309,13 @@ def encdec_files_to_tensors(files, normalize=True, normalization='default'):
     return waterfall_arr, turn_arr, latent_arr, phasespace_arr
 
 
-def encoder_files_to_tensors(files, normalize=True, normalization='default'):
+def encoder_files_to_tensors(files, normalize=True, normalization='default', img_normalize='default'):
     feature_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
     output_arr = np.zeros((len(files), 7), dtype=np.float32)
     for i, file in enumerate(files):
         features, output = load_encoder_data(file, normalize=normalize,
-                                             normalization=normalization)
+                                             normalization=normalization,
+                                             img_normalize=img_normalize)
         feature_arr[i] = features
         output_arr[i] = output
     x_train = tf.convert_to_tensor(feature_arr)
@@ -608,7 +617,7 @@ def real_files_to_tensors(data_dir, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=12
         fname = os.path.join(data_dir, file)
         waterfall = getTimgForModelFromDataFile_new(fname)
         waterfall_arr[i] = waterfall
-        file_list.append(file.split['.npy'][0])
+        file_list.append(file.split('.npy')[0])
     return waterfall_arr, file_list
     
 def fwhm(x, y, level=0.5):
