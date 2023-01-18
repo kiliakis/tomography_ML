@@ -63,7 +63,7 @@ train_cfg = {
 }
 
 model_cfg = {
-    # Best phEr config --> 2.47e-5 val_loss
+    # Best phEr config --> 3.07e-6 val_loss
     'phEr': {
         'epochs': 60,
         'dense_layers': [1024, 256, 32],
@@ -78,7 +78,7 @@ model_cfg = {
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # Best enErr config --> 1.9703e-05 val_loss
+    # Best enErr config --> 1.54e-05 val_loss
     'enEr': {
         'epochs': 60,
         'dense_layers': [1024, 256, 64],
@@ -93,7 +93,7 @@ model_cfg = {
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # Best bl config --> 2.19e-04 val_loss
+    # Best bl config --> 1.83e-04 val_loss
     'bl': {
         'epochs': 60,
         'cropping': [12, 12],
@@ -104,11 +104,11 @@ model_cfg = {
         'activation': 'relu',
         'pooling': None,
         'dropout': 0.,
-        'lr': 5e-4,
+        'lr': 1e-3,
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # Best inten config --> 8.23e-02 val_loss
+    # Best inten config --> 7.57e-02 val_loss
     'inten': {
         'epochs': 30,
         'cropping': [6, 6],
@@ -123,7 +123,7 @@ model_cfg = {
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # best Vrf config --> 5.92e-05 val loss
+    # best Vrf config --> 2.54e-05 val loss
     'Vrf': {
         'epochs': 60,
         'cropping': [6, 6],
@@ -138,7 +138,7 @@ model_cfg = {
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # best mu config --> 8.8e-04 val loss
+    # best mu config --> 8.00e-04 val loss
     'mu': {
         'epochs': 60,
         'cropping': [0, 0],
@@ -153,7 +153,7 @@ model_cfg = {
         'normalization': 'minmax',
         'batch_size': 32
     },
-    # best VrfSPS config --> 9.5e-04 val loss
+    # best VrfSPS config --> 7.83e-04 val loss
     'VrfSPS': {
         'epochs': 60,
         'cropping': [6, 6],

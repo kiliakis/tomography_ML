@@ -82,7 +82,12 @@ class EncoderMulti():
                  'inten', 'Vrf', 'mu',
                  'VrfSPS']
 
-    def __init__(self, enc_weights_dir=None, enc_list=None):
+    def __init__(self, enc_weights_dir=None, enc_list=None, loss_weights=None):
+        self.loss_weights = loss_weights
+        if self.loss_weights is None:
+            self.loss_weights = np.arange(len(self.var_names))
+        # else:
+        #     self.var_names = [self.var_names[i] for i in loss_weights]
         if enc_weights_dir:
             if 'encoder.h5' in os.listdir(enc_weights_dir):
                 self.model = keras.models.load_model(
@@ -114,6 +119,12 @@ class EncoderMulti():
                 latent[:, 3], latent[:, 4], latent[:, 5],
                 latent[:, 6], normalization=normalization)
             latent = np.array(latent).T
+        if len(self.loss_weights) < latent.shape[1]:
+            # it means that not all latents are needed
+            # keep only those in loss_weights
+            latent = tf.concat([tf.expand_dims(tf.gather(latent, i, axis=1), axis=1)
+                        for i in self.loss_weights], -1)
+
         return latent
 
     def load(self, weights_dir):
@@ -283,8 +294,15 @@ class Decoder(keras.Model):
 
     @tf.function
     def decode(self, latent, turn, unnormalize=False):
+        # if the number of latents is equal to the input shape
+        # it means the intensity latent has to be removed
+        # intenstity is latent 3 (starting from 0)
+        # if latent.shape[1] == self.model.layers[0].input_shape[1]:
+        #     latent = tf.concat([tf.expand_dims(tf.gather(latent, i, axis=1), axis=1)
+        #                         for i in loss_weights], -1)
         turn = tf.reshape(turn, [-1, 1])
         extended = tf.concat([turn, latent], axis=1)
+        # check input size and drop dimension if needed
         PS = self.model(extended)
         if unnormalize:
             PS = unnormalizeIMG(PS)
@@ -304,15 +322,17 @@ class Decoder(keras.Model):
 
 
 class encoderDecoderModel():
-    def __init__(self, enc_weights_dir, dec_weights_dir):
-        self.encoder = EncoderMulti(enc_weights_dir)
+    def __init__(self, enc_weights_dir, dec_weights_dir, loss_weights=None):
+        self.encoder = EncoderMulti(enc_weights_dir, loss_weights=loss_weights)
 
         if 'decoder.h5' in os.listdir(dec_weights_dir):
-            self.decoder = keras.models.load_model(
-                os.path.join(dec_weights_dir, 'decoder.h5'),
-                compile=False)
-            optimizer = keras.optimizers.Adam(learning_rate=1e-3)
-            self.decoder.compile(optimizer=optimizer, loss='mse')
+            self.decoder = Decoder()
+            self.decoder.load(dec_weights_dir)
+            # self.decoder = keras.models.load_model(
+            #     os.path.join(dec_weights_dir, 'decoder.h5'),
+            #     compile=False)
+            # optimizer = keras.optimizers.Adam(learning_rate=1e-3)
+            # self.decoder.compile(optimizer=optimizer, loss='mse')
         else:
             print(f'Error, decoder.h5 not found in {dec_weights_dir}')
             exit(-1)
