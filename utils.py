@@ -784,6 +784,24 @@ def running_mean(x, N):
     return moving_average
 
 
+def window_mean(x, W, axis=0, zeropad=14):
+    moving_average = np.copy(x)
+    if axis == 0:
+        for i in np.arange(np.shape(moving_average)[0]):
+            moving_average[i, :zeropad] = moving_average[i, zeropad] * np.ones(zeropad) 
+            moving_average[i, -zeropad:] = moving_average[i, -zeropad-1] * np.ones(zeropad)
+            moving_average[i,:] = np.convolve(moving_average[i], np.ones((W,))/W, mode='same')
+        moving_average[:, :zeropad] = x[:, :zeropad]
+        moving_average[:, -zeropad:] = x[:, -zeropad:]
+    elif axis == 1:
+        for i in np.arange(np.shape(moving_average)[1]):
+            moving_average[:zeropad, i] = moving_average[zeropad, i] * np.ones(zeropad) 
+            moving_average[-zeropad:, i] = moving_average[-zeropad-1, i] * np.ones(zeropad)
+            moving_average[:, i] = np.convolve(moving_average[:, i], np.ones((W,))/W, mode='same')
+        moving_average[:zeropad, :] = x[:zeropad, :]
+        moving_average[-zeropad:, :] = x[-zeropad:, :]
+    return moving_average
+
 def conv2D_output_size(input_size, out_channels, padding, kernel_size, stride,
                        dilation=None):
     if dilation is None:
