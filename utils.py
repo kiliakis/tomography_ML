@@ -36,6 +36,47 @@ def plot_loss(lines, title='', figname=None):
         plt.close()
 
 
+def normalizeIMG(img, maxPixel=1):
+    return (img / (maxPixel/2)) - 1
+
+
+def unnormalizeIMG(img, maxPixel=1):
+    return (img+1)*(maxPixel/2)
+
+
+# def normalizeTurn(turn_num, maxTurns=300.0):
+#     return (turn_num / (maxTurns/2)) - 1
+
+
+# def unnormalizeTurn(turn_num, maxTurns=300.0):
+#     return np.round((turn_num+1)*(maxTurns/2), 0)
+
+
+def minMaxScaleIMG(X, feature_range=(0, 1)):
+    min_val = np.min(X)
+    max_val = np.max(X)
+    scale = (feature_range[1] - feature_range[0]) / (max_val - min_val)
+    return scale * (X-min_val) + feature_range[0]
+
+
+def minmax_normalize_param(val, min_val, max_val, target_range=(0, 1)):
+    scale = (target_range[1] - target_range[0]) / (max_val - min_val)
+    return scale * (val-min_val) + target_range[0]
+
+
+def minmax_unnormalize_param(norm_val, min_val, max_val, norm_range=(0, 1)):
+    scale = (max_val - min_val) / (norm_range[1] - norm_range[0])
+    return scale * (norm_val - norm_range[0]) + min_val
+
+
+def normalize_param(val, mu, sig):
+    return (val-mu)/sig
+
+
+def unnormalize_param(norm_val, mu, sig):
+    return norm_val*sig+mu
+
+
 def calc_bin_centers(cut_left, cut_right, n_slices):
     edges = np.linspace(cut_left, cut_right, n_slices + 1)
     bin_centers = (edges[:-1] + edges[1:])/2
@@ -139,14 +180,10 @@ def extract_data_Fromfolder(fn, simulations_dir, IMG_OUTPUT_SIZE, zeropad,
 
 
 def read_pk(fname):
-    try:
-        data = pk.loads(tf.io.decode_raw(tf.io.read_file(fname), tf.uint8))
-    except Exception as e:
-        print(f'Skipping file {fname}, ', e)
+    data = pk.loads(tf.io.decode_raw(tf.io.read_file(fname), tf.uint8))
     return data['turn'], data['T_img'], data['PS'], data['fn'], data['params']
 
 # Returns a random sample of percent filenames from input path
-
 
 def sample_files(path, percent, keep_every=1):
     ret_files = []
@@ -172,33 +209,14 @@ def sample_files(path, percent, keep_every=1):
     return ret_files
 
 
-def normalizeIMG(img, maxPixel=1):
-    return (img / (maxPixel/2)) - 1
-
-
-def unnormalizeIMG(img, maxPixel=1):
-    return (img+1)*(maxPixel/2)
-
-
-def normalizeTurn(turn_num, maxTurns=300.0):
-    return (turn_num / (maxTurns/2)) - 1
-
-
-def unnormalizeTurn(turn_num, maxTurns=300.0):
-    return np.round((turn_num+1)*(maxTurns/2), 0)
-
-def minMaxScaleIMG(X, feature_range=(0,1)):
-    min_val = np.min(X)
-    max_val = np.max(X)
-    scale = (feature_range[1] - feature_range[0]) / (max_val - min_val)
-    return scale * (X-min_val) + feature_range[0]
 
 def load_encdec_data(pk_file, normalization, normalize=True, img_normalize='default'):
     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
     T_img = np.reshape(T_img, T_img.shape+(1,))
     PS = np.reshape(PS, PS.shape+(1,))
     PS = normalizeIMG(PS)
-    turn_num = normalizeTurn(turn_num)
+    # turn_num = normalizeTurn(turn_num)
+    turn_num = minmax_normalize_param(turn_num, 1, 298, target_range=(0, 1))
     if img_normalize=='default':
         T_img = normalizeIMG(T_img)
     elif img_normalize=='minmax':
@@ -251,7 +269,9 @@ def load_decoder_data(pk_file, normalization):
     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
     # T_img = np.reshape(T_img, T_img.shape+(1,))
     PS = np.reshape(PS, PS.shape+(1,))
-    turn_num = normalizeTurn(turn_num)
+    # turn_num = normalizeTurn(turn_num)
+    turn_num = minmax_normalize_param(turn_num, 1, 298, target_range=(0, 1))
+
     # T_img = normalizeIMG(T_img)
     PS = normalizeIMG(PS)
     phEr = float(params_dict['phEr'])
@@ -273,7 +293,9 @@ def load_model_data_new(pk_file):
     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
     T_img = np.reshape(T_img, T_img.shape+(1,))
     PS = np.reshape(PS, PS.shape+(1,))
-    turn_num = normalizeTurn(turn_num)
+    # turn_num = normalizeTurn(turn_num)
+    turn_num = minmax_normalize_param(turn_num, 1, 298, target_range=(0, 1))
+
     T_img = normalizeIMG(T_img)
     PS = normalizeIMG(PS)
     phEr = float(params_dict['phEr'])
@@ -293,19 +315,25 @@ def encdec_files_to_tensors(files, normalize=True, normalization='default', img_
     turn_arr = np.zeros(len(files), dtype=np.float32)
     latent_arr = np.zeros((len(files), 7), dtype=np.float32)
     phasespace_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
-    for i, file in enumerate(files):
-        waterfall, turn, latents, ps = load_encdec_data(file,
+    i = 0
+    for file in files:
+        try:
+            waterfall, turn, latents, ps = load_encdec_data(file,
                                                         normalize=normalize,
                                                         normalization=normalization,
                                                         img_normalize=img_normalize)
+        except Exception as e:
+            print(f'Skipping file {file}, ', e)
+            continue
         waterfall_arr[i] = waterfall
         turn_arr[i] = turn
         latent_arr[i] = latents
         phasespace_arr[i] = ps
-    waterfall_arr = tf.convert_to_tensor(waterfall_arr)
-    turn_arr = tf.convert_to_tensor(turn_arr)
-    latent_arr = tf.convert_to_tensor(latent_arr)
-    phasespace_arr = tf.convert_to_tensor(phasespace_arr)
+        i+=1
+    waterfall_arr = tf.convert_to_tensor(waterfall_arr[:i])
+    turn_arr = tf.convert_to_tensor(turn_arr[:i])
+    latent_arr = tf.convert_to_tensor(latent_arr[:i])
+    phasespace_arr = tf.convert_to_tensor(phasespace_arr[:i])
 
     return waterfall_arr, turn_arr, latent_arr, phasespace_arr
 
@@ -313,43 +341,39 @@ def encdec_files_to_tensors(files, normalize=True, normalization='default', img_
 def encoder_files_to_tensors(files, normalize=True, normalization='default', img_normalize='default'):
     feature_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
     output_arr = np.zeros((len(files), 7), dtype=np.float32)
-    for i, file in enumerate(files):
-        features, output = load_encoder_data(file, normalize=normalize,
+    i = 0
+    for file in files:
+        try:
+            features, output = load_encoder_data(file, normalize=normalize,
                                              normalization=normalization,
                                              img_normalize=img_normalize)
+        except Exception as e:
+            print(f'Skipping file {file}, ', e)
+            continue
         feature_arr[i] = features
         output_arr[i] = output
-    x_train = tf.convert_to_tensor(feature_arr)
-    y_train = tf.convert_to_tensor(output_arr)
+        i+=1
+    x_train = tf.convert_to_tensor(feature_arr[:i])
+    y_train = tf.convert_to_tensor(output_arr[:i])
     return x_train, y_train
 
 
 def decoder_files_to_tensors(files, normalization='default'):
     feature_arr = np.zeros((len(files), 8), dtype=np.float32)
     output_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
-    for i, file in enumerate(files):
-        features, output = load_decoder_data(file, normalization=normalization)
+    i = 0
+    for file in files:
+        try:
+            features, output = load_decoder_data(file, normalization=normalization)
+        except Exception as e:
+            print(f'Skipping file {file}, ', e)
+            continue
         feature_arr[i] = features
         output_arr[i] = output
-    x_train = tf.convert_to_tensor(feature_arr)
-    y_train = tf.convert_to_tensor(output_arr)
+        i+=1
+    x_train = tf.convert_to_tensor(feature_arr[:i])
+    y_train = tf.convert_to_tensor(output_arr[:i])
     return x_train, y_train
-
-
-def minmax_normalize_param(val, min, max):
-    return (val-min)/(max-min)
-
-
-def minmax_unnormalize_param(norm_val, min, max):
-    return (max-min)*norm_val + min
-
-
-def normalize_param(val, mu, sig):
-    return (val-mu)/sig
-
-
-def unnormalize_param(norm_val, mu, sig):
-    return norm_val*sig+mu
 
 
 def normalize_params(*args, normalization):
@@ -447,154 +471,11 @@ def unnormalize_params(*args, normalization):
             unnorm_func(args[5], mu_a, mu_b),\
             unnorm_func(args[6], VrfSPS_a, VrfSPS_b)
 
-# def normalize_params(phErs, enErs, bls, intens, Vrf, mu, VrfSPS,
-#                      normalization  # can be std or minmax
-#                      ):
-#     if normalization == 'std':
-#         phEr_mu = 0.45
-#         phEr_sig = 29.14
-#         enEr_mu = -0.11
-#         enEr_sig = 58.23
-#         bl_mu = 1.48e-9
-#         bl_sig = 0.167e-9
-#         intens_mu = 1.565e11
-#         intens_sig = 0.843e11
-#         Vrf_mu = 6.06
-#         Vrf_sig = 1.79
-#         mu_mu = 2.89
-#         mu_sig = 1.11
-#         VrfSPS_mu = 8.51
-#         VrfSPS_sig = 2.02
-#         return normalize_param(phErs, phEr_mu, phEr_sig),\
-#             normalize_param(enErs, enEr_mu, enEr_sig),\
-#             normalize_param(bls, bl_mu, bl_sig),\
-#             normalize_param(intens, intens_mu, intens_sig),\
-#             normalize_param(Vrf, Vrf_mu, Vrf_sig),\
-#             normalize_param(mu, mu_mu, mu_sig),\
-#             normalize_param(VrfSPS, VrfSPS_mu, VrfSPS_sig)
-#     elif normalization == 'default':
-#         phEr_mu = 0
-#         phEr_sig = 50
-#         enEr_mu = 0
-#         enEr_sig = 100
-#         bl_mu = 1.4e-9
-#         bl_sig = 0.2e-9
-#         intens_mu = 1.225e11
-#         intens_sig = 0.37e11
-#         Vrf_mu = 6
-#         Vrf_sig = 2.2
-#         mu_mu = 2
-#         mu_sig = 1
-#         VrfSPS_mu = 8.5
-#         VrfSPS_sig = 2.2
-#         return normalize_param(phErs, phEr_mu, phEr_sig),\
-#             normalize_param(enErs, enEr_mu, enEr_sig),\
-#             normalize_param(bls, bl_mu, bl_sig),\
-#             normalize_param(intens, intens_mu, intens_sig),\
-#             normalize_param(Vrf, Vrf_mu, Vrf_sig),\
-#             normalize_param(mu, mu_mu, mu_sig),\
-#             normalize_param(VrfSPS, VrfSPS_mu, VrfSPS_sig)
-
-#     elif normalization == 'minmax':
-#         phEr_min = -50.
-#         phEr_max = 50.
-#         enEr_min = -100.
-#         enEr_max = 100.
-#         bl_min = 1.2e-9
-#         bl_max = 1.8e-9
-#         intens_min = 1.0e10
-#         intens_max = 3.0e11
-#         Vrf_min = 3.
-#         Vrf_max = 9.2
-#         mu_min = 1.
-#         mu_max = 5.
-#         VrfSPS_min = 5.
-#         VrfSPS_max = 12.0
-#         return minmax_normalize_param(phErs, phEr_min, phEr_max),\
-#             minmax_normalize_param(enErs, enEr_min, enEr_max),\
-#             minmax_normalize_param(bls, bl_min, bl_max),\
-#             minmax_normalize_param(intens, intens_min, intens_max),\
-#             minmax_normalize_param(Vrf, Vrf_min, Vrf_max),\
-#             minmax_normalize_param(mu, mu_min, mu_max),\
-#             minmax_normalize_param(VrfSPS, VrfSPS_min, VrfSPS_max)
-
-
-# def unnormalize_params(phErs, enErs, bls, intens, Vrf, mu, VrfSPS,
-#                        normalization  # can be default std or minmax
-#                        ):
-#     if normalization == 'std':
-#         phEr_mu = 0.45
-#         phEr_sig = 29.14
-#         enEr_mu = -0.11
-#         enEr_sig = 58.23
-#         bl_mu = 1.48e-9
-#         bl_sig = 0.167e-9
-#         intens_mu = 1.565e11
-#         intens_sig = 0.843e11
-#         Vrf_mu = 6.06
-#         Vrf_sig = 1.79
-#         mu_mu = 2.89
-#         mu_sig = 1.11
-#         VrfSPS_mu = 8.51
-#         VrfSPS_sig = 2.02
-#         return unnormalize_param(phErs, phEr_mu, phEr_sig),\
-#             unnormalize_param(enErs, enEr_mu, enEr_sig),\
-#             unnormalize_param(bls, bl_mu, bl_sig),\
-#             unnormalize_param(intens, intens_mu, intens_sig),\
-#             unnormalize_param(Vrf, Vrf_mu, Vrf_sig),\
-#             unnormalize_param(mu, mu_mu, mu_sig),\
-#             unnormalize_param(VrfSPS, VrfSPS_mu, VrfSPS_sig)
-#     elif normalization == 'default':
-#         phEr_mu = 0
-#         phEr_sig = 50
-#         enEr_mu = 0
-#         enEr_sig = 100
-#         bl_mu = 1.4e-9
-#         bl_sig = 0.2e-9
-#         intens_mu = 1.225e11
-#         intens_sig = 0.37e11
-#         Vrf_mu = 6
-#         Vrf_sig = 2.2
-#         mu_mu = 2
-#         mu_sig = 1
-#         VrfSPS_mu = 8.5
-#         VrfSPS_sig = 2.2
-#         return unnormalize_param(phErs, phEr_mu, phEr_sig),\
-#             unnormalize_param(enErs, enEr_mu, enEr_sig),\
-#             unnormalize_param(bls, bl_mu, bl_sig),\
-#             unnormalize_param(intens, intens_mu, intens_sig),\
-#             unnormalize_param(Vrf, Vrf_mu, Vrf_sig),\
-#             unnormalize_param(mu, mu_mu, mu_sig),\
-#             unnormalize_param(VrfSPS, VrfSPS_mu, VrfSPS_sig)
-
-#     elif normalization == 'minmax':
-#         phEr_min = -50.
-#         phEr_max = 50.
-#         enEr_min = -100.
-#         enEr_max = 100.
-#         bl_min = 1.2e-9
-#         bl_max = 1.8e-9
-#         intens_min = 1.0e10
-#         intens_max = 3.0e11
-#         Vrf_min = 3.
-#         Vrf_max = 9.2
-#         mu_min = 1.
-#         mu_max = 5.
-#         VrfSPS_min = 5.
-#         VrfSPS_max = 12.0
-#         return minmax_unnormalize_param(phErs, phEr_min, phEr_max),\
-#             minmax_unnormalize_param(enErs, enEr_min, enEr_max),\
-#             minmax_unnormalize_param(bls, bl_min, bl_max),\
-#             minmax_unnormalize_param(intens, intens_min, intens_max),\
-#             minmax_unnormalize_param(Vrf, Vrf_min, Vrf_max),\
-#             minmax_unnormalize_param(mu, mu_min, mu_max),\
-#             minmax_unnormalize_param(VrfSPS, VrfSPS_min, VrfSPS_max)
-
-
 def assess_model(predictions, turn_normalized, T_image, PS_image,
                  plots_dir='./plots', savefig=False):
     for i in range(predictions.shape[0]):
-        turn = int(unnormalizeTurn(turn_normalized[i]))
+        turn = int(minmax_normalize_param(turn_normalized[i], 0, 1, target_range=(1, 298)))
+        # turn = int(unnormalizeTurn(turn_normalized[i]))
         f, ax = plt.subplots(2, 3)
         ax[0, 0].imshow(T_image[i, :, :, 0],  vmin=0, vmax=1, cmap='jet')
         ax[0, 0].set_title('T prof')
@@ -632,7 +513,8 @@ def assess_decoder(predictions, turn_normalized, PS_image,
                    plots_dir='./plots', savefig=False):
 
     for i in range(predictions.shape[0]):
-        turn = int(unnormalizeTurn(turn_normalized[i]))
+        turn = int(minmax_normalize_param(turn_normalized[i], 0, 1, target_range=(1, 298)))
+        # turn = int(unnormalizeTurn(turn_normalized[i]))
         f, ax = plt.subplots(2, 2)
         ax[0, 0].imshow(PS_image[i, :, :, 0], vmin=-1, vmax=1, cmap='jet')
         ax[0, 0].set_title('PS @ {}'.format(turn))
@@ -661,8 +543,6 @@ def assess_decoder(predictions, turn_normalized, PS_image,
 #         BunchProfiles = np.load(f)
 #     BunchProfiles = BunchProfiles*Ib/np.sum(BunchProfiles[:, 0])
 #     return timeScale_for_tomo, BunchProfiles
-
-
 
 # def getTimeProfiles_FromData_2(fname, Ib):
 #     with hp.File(fname, 'r') as sf:
@@ -700,21 +580,38 @@ def getTimgForModelFromDataFile_new(fname, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_
     BunchProfiles = BunchProfiles/T_normFactor
     sel_turns = np.arange(start_turn, skipturns *
                           (IMG_OUTPUT_SIZE-2*zeropad), skipturns).astype(np.int32)
+    # print(sel_turns[0], sel_turns[-1])
     T_img = np.pad(BunchProfiles[:, sel_turns], ((zeropad-centroid_offset, zeropad +
                                                   centroid_offset), (zeropad, zeropad)), 'constant', constant_values=(0, 0))
     T_img_ForModel = minMaxScaleIMG(np.reshape(T_img, T_img.shape+(1,)))
-    return T_img_ForModel
+
+    BunchProfiles = np.pad(BunchProfiles[:, start_turn:sel_turns[-1]+1], ((zeropad-centroid_offset, zeropad +
+                                                  centroid_offset), (zeropad, zeropad)), 'constant', constant_values=(0, 0))
+    BunchProfiles = minMaxScaleIMG(np.reshape(BunchProfiles, BunchProfiles.shape+(1,)))
+
+    return T_img_ForModel, BunchProfiles
 
 def real_files_to_tensors(data_dir, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=128, zeropad=14, start_turn=1, skipturns=3, centroid_offset=0):
     files = os.listdir(data_dir)
     waterfall_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
+    bunch_profiles_arr = np.zeros((len(files), 128, 326, 1), dtype=np.float32)
+
     file_list = []
-    for i, file in enumerate(files):
+    # for i, file in enumerate(files):
+    i = 0
+    for file in files:
         fname = os.path.join(data_dir, file)
-        waterfall = getTimgForModelFromDataFile_new(fname)
+        try:
+            waterfall, bunch_profiles = getTimgForModelFromDataFile_new(fname)
+        except Exception as e:
+            print(f'Skipping file {fname}, ', e)
+            continue
         waterfall_arr[i] = waterfall
+        bunch_profiles_arr[i] = bunch_profiles
+        i+=1
         file_list.append(file.split('.npy')[0])
-    return waterfall_arr, file_list
+        
+    return waterfall_arr[:i], file_list, bunch_profiles_arr[:i]
     
 def fwhm(x, y, level=0.5):
     offset_level = np.mean(y[0:10])

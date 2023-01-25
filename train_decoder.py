@@ -43,7 +43,7 @@ additional_latent_dim = 1
 # Train specific
 train_cfg = {
     'epochs': 100,
-    'dense_layers': [latent_dim + additional_latent_dim, 64, 1024],
+    'dense_layers': [latent_dim + additional_latent_dim, 256, 1024],
     'filters': [32, 16, 8, 1],
     'kernel_size': 7,
     'strides': [2, 2],
