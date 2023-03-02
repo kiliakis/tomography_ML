@@ -472,38 +472,50 @@ def unnormalize_params(*args, normalization):
             unnorm_func(args[6], VrfSPS_a, VrfSPS_b)
 
 def assess_model(predictions, turn_normalized, T_image, PS_image,
-                 plots_dir='./plots', savefig=False):
+                 plots_dir='./plots', savefig=False, with_projections=True):
     for i in range(predictions.shape[0]):
         turn = int(minmax_normalize_param(turn_normalized[i], 0, 1, target_range=(1, 298)))
         # turn = int(unnormalizeTurn(turn_normalized[i]))
-        f, ax = plt.subplots(2, 3)
-        ax[0, 0].imshow(T_image[i, :, :, 0],  vmin=0, vmax=1, cmap='jet')
-        ax[0, 0].set_title('T prof')
-        ax[0, 0].set_xticks([], [])
-        ax[0, 0].set_yticks([], [])
-        ax[0, 1].imshow(PS_image[i, :, :, 0], vmin=-1, vmax=1, cmap='jet')
-        ax[0, 1].set_title('PS @ {}'.format(turn))
-        ax[0, 1].set_xticks([], [])
-        ax[0, 1].set_yticks([], [])
+        if with_projections:
+            f, ax = plt.subplots(2, 3)
+        else:
+            f, ax = plt.subplots(1, 3)
+        ax = np.ravel(ax)
+        ax[0].imshow(T_image[i, :, :, 0],  vmin=0, vmax=1, cmap='jet')
+        ax[0].set_title('T prof')
+        ax[0].set_xticks([], [])
+        ax[0].set_yticks([], [])
+        ax[1].imshow(PS_image[i, :, :, 0], vmin=-1, vmax=1, cmap='jet')
+        ax[1].set_title('PS @ {}'.format(turn))
+        ax[1].set_xticks([], [])
+        ax[1].set_yticks([], [])
 
-        ax[0, 2].imshow(predictions[i, :, :, 0], vmin=-1, vmax=1, cmap='jet')
-        ax[0, 2].set_title('PREDICTION @ {}'.format(turn))
-        ax[0, 2].set_xticks([], [])
-        ax[0, 2].set_yticks([], [])
+        ax[2].imshow(predictions[i, :, :, 0], vmin=-1, vmax=1, cmap='jet')
+        ax[2].set_title('PRED @ {}'.format(turn))
+        ax[2].set_xticks([], [])
+        ax[2].set_yticks([], [])
 
-        ax[1, 1].plot(np.sum(PS_image[i, :, :, 0], 0), label='Target')
-        ax[1, 1].plot(np.sum(predictions[i, :, :, 0], 0), label='Prediction')
-        ax[1, 1].legend()
-        ax[1, 1].set_title('Time Projection')
-        ax[1, 2].plot(np.sum(PS_image[i, :, :, 0], 1), label='Target')
-        ax[1, 2].plot(np.sum(predictions[i, :, :, 0], 1), label='Prediction')
-        ax[1, 2].legend()
-        ax[1, 2].set_title('Energy Projection')
-        f.delaxes(ax[1, 0])
+        if with_projections:
+            ax[4].plot(np.sum(PS_image[i, :, :, 0], 0), label='True')
+            ax[4].plot(np.sum(predictions[i, :, :, 0], 0), label='Pred')
+            ax[4].legend(loc='center right')
+            ax[4].set_title('Time Projection')
+            ax[4].set_yticks([], [])
+            ax[4].set_xticks([], [])
+
+            ax[5].plot(np.sum(PS_image[i, :, :, 0], 1), label='True')
+            ax[5].plot(np.sum(predictions[i, :, :, 0], 1), label='Pred')
+            ax[5].legend(loc='center right')
+            ax[5].set_title('Energy Projection')
+            ax[5].set_yticks([], [])
+            ax[5].set_xticks([], [])
+
+            f.delaxes(ax[3])
+
         plt.tight_layout()
         if savefig:
             plt.savefig(os.path.join(
-                plots_dir, f'assess_model_turn{turn}.jpg'), dpi=400)
+                plots_dir, f'assess_model_turn{turn}_projections{with_projections}.jpg'), dpi=100, bbox_inches='tight')
         else:
             plt.show()
         plt.close()

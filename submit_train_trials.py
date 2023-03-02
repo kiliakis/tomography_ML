@@ -7,7 +7,7 @@ import argparse
 
 submission_system = 'condor'
 USERNAME = 'kiliakis'
-RUNTIME = 8          # in hours
+RUNTIME = 10          # in hours
 USE_GPU = 1          # request for a gpu node
 CPU_CORES = 1        # number of CPU cores
 if submission_system == 'condor':
@@ -99,7 +99,7 @@ configs = [
             'dropout': 0.0,
             'loss': 'mse', 
             'lr': 1e-3,
-            'dataset%': 0.6,
+            'dataset%': 0.75,
             'normalization': 'minmax',
             'loss_weights': [0, 1, 2, 3, 5, 6, 7],
 
@@ -226,7 +226,7 @@ if __name__ == '__main__':
             f.write("should_transfer_files   = IF_needed \n")
             f.write(f"request_gpus            = {USE_GPU} \n")
             f.write(f"request_cpus            = {CPU_CORES} \n")
-            f.write(f"request_memory            = 14000MB \n")
+            f.write(f"request_memory            = 28000MB \n")
             # f.write(f"+RequestMemory            = 10000 \n")
             # f.write("requirements            = regexp(\"V100\", TARGET.CUDADeviceName) \n")
             # f.write("Arch                    = \"INTEL\" \n ")
