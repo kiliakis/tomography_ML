@@ -27,7 +27,7 @@ parser.add_argument('-c', '--config', type=str, default=None,
 # Initialize parameters
 # data_dir = './tomo_data/datasets_encoder_02-12-22'
 # data_dir = './tomo_data/datasets_encoder_TF_16-12-22'
-data_dir = './tomo_data/datasets_encoder_TF_03-02-23'
+data_dir = './tomo_data/datasets_encoder_TF_03-03-23'
 
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 

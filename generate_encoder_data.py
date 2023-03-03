@@ -16,7 +16,7 @@ skipturns = 3
 # Input output directories
 eos = '/eos/user/k/kiliakis/'
 simulations_dir = eos + '/tomo_data/results_tomo_02-12-22'
-save_dir = eos + '/tomo_data/datasets_encoder_TF_03-02-23'
+save_dir = eos + '/tomo_data/datasets_encoder_TF_03-03-23'
 
 parser = argparse.ArgumentParser(
     description='Generate the encoder data from the raw simulation data')
