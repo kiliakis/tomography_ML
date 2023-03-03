@@ -1,11 +1,9 @@
-from ast import Try
 import numpy as np
 import pickle as pk
 import h5py as hp
 import os
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
 import re
 import glob
 
@@ -78,12 +76,12 @@ def unnormalize_param(norm_val, mu, sig):
 
 
 def calc_bin_centers(cut_left, cut_right, n_slices):
-    edges = np.linspace(cut_left, cut_right, n_slices + 1)
-    bin_centers = (edges[:-1] + edges[1:])/2
+    bin_centers = np.linspace(cut_left, cut_right, n_slices)
+    # bin_centers = (edges[:-1] + edges[1:])/2
     return bin_centers
 
 
-def loadTF(path, beam=1, cut=52):
+def loadTF(path, beam=2, cut=52):
     path = path.format(beam)
     h5file = hp.File(path, 'r')
     freq_array = np.array(h5file["/TransferFunction/freq"])
@@ -147,17 +145,19 @@ def extract_data_Fromfolder(fn, simulations_dir, IMG_OUTPUT_SIZE, zeropad,
     T_img = np.zeros((IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE))
     with hp.File(os.path.join(os.path.join(simulations_dir, fn), 'saved_result.hdf5'), 'r') as sf:
         BunchProfiles = np.array(sf['bunchProfiles'])
+
         # fig = plt.figure()
         # plt.plot(time_scale, BunchProfiles[:, 0], label='before_tf')
         if (time_scale is not None) and (freq_array is not None) and (TF_array is not None):
             _, BunchProfiles = bunchProfile_TFconvolve(BunchProfiles, time_scale,
                                                        freq_array, TF_array)
 
+        BunchProfiles = BunchProfiles / sf['columns'][0][3]*paramsDict['int']
+
         # plt.plot(time_scale, BunchProfiles[:, 0], label='after_tf')
         # plt.legend()
         # plt.savefig('plots/profile_before_after_tf.jpg', dpi=400)
         # plt.close()
-        BunchProfiles /= sf['columns'][0][3]*paramsDict['int']
 
         EnergyProfiles = np.array(
             sf['energyProfiles'])/sf['columns'][0][3]*paramsDict['int']
@@ -221,7 +221,8 @@ def load_encdec_data(pk_file, normalization, normalize=True, img_normalize='defa
         T_img = normalizeIMG(T_img)
     elif img_normalize=='minmax':
         T_img = minMaxScaleIMG(T_img)
-
+    elif img_normalize == 'off':
+        pass
     phEr = float(params_dict['phEr'])
     enEr = float(params_dict['enEr'])
     bl = float(params_dict['bl'])
@@ -247,6 +248,8 @@ def load_encoder_data(pk_file, normalization, normalize=True, img_normalize='def
         T_img = normalizeIMG(T_img)
     elif img_normalize=='minmax':
         T_img = minMaxScaleIMG(T_img)
+    elif img_normalize=='off':
+        pass
 
     # PS = normalizeIMG(PS)
     phEr = float(params_dict['phEr'])
@@ -272,7 +275,6 @@ def load_decoder_data(pk_file, normalization):
     # turn_num = normalizeTurn(turn_num)
     turn_num = minmax_normalize_param(turn_num, 1, 298, target_range=(0, 1))
 
-    # T_img = normalizeIMG(T_img)
     PS = normalizeIMG(PS)
     phEr = float(params_dict['phEr'])
     enEr = float(params_dict['enEr'])
@@ -289,25 +291,25 @@ def load_decoder_data(pk_file, normalization):
     return ([turn_num, phEr, enEr, bl, inten, Vrf, mu, VrfSPS], PS)
 
 
-def load_model_data_new(pk_file):
-    turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
-    T_img = np.reshape(T_img, T_img.shape+(1,))
-    PS = np.reshape(PS, PS.shape+(1,))
-    # turn_num = normalizeTurn(turn_num)
-    turn_num = minmax_normalize_param(turn_num, 1, 298, target_range=(0, 1))
+# def load_model_data_new(pk_file):
+#     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
+#     T_img = np.reshape(T_img, T_img.shape+(1,))
+#     PS = np.reshape(PS, PS.shape+(1,))
+#     # turn_num = normalizeTurn(turn_num)
+#     turn_num = minmax_normalize_param(turn_num, 1, 298, target_range=(0, 1))
 
-    T_img = normalizeIMG(T_img)
-    PS = normalizeIMG(PS)
-    phEr = float(params_dict['phEr'])
-    enEr = float(params_dict['enEr'])
-    bl = float(params_dict['bl'])
-    inten = float(params_dict['int'])
-    Vrf = float(params_dict['Vrf'])
-    mu = float(params_dict['mu'])
-    VrfSPS = float(params_dict['VrfSPS'])
-    T_normFactor = float(params_dict['T_normFactor'])
-    B_normFactor = float(params_dict['B_normFactor'])
-    return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, Vrf, mu, VrfSPS, T_normFactor, B_normFactor
+#     # T_img = normalizeIMG(T_img)
+#     PS = normalizeIMG(PS)
+#     phEr = float(params_dict['phEr'])
+#     enEr = float(params_dict['enEr'])
+#     bl = float(params_dict['bl'])
+#     inten = float(params_dict['int'])
+#     Vrf = float(params_dict['Vrf'])
+#     mu = float(params_dict['mu'])
+#     VrfSPS = float(params_dict['VrfSPS'])
+#     T_normFactor = float(params_dict['T_normFactor'])
+#     B_normFactor = float(params_dict['B_normFactor'])
+#     return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, Vrf, mu, VrfSPS, T_normFactor, B_normFactor
 
 
 def encdec_files_to_tensors(files, normalize=True, normalization='default', img_normalize='default'):

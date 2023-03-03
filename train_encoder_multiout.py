@@ -25,9 +25,10 @@ parser.add_argument('-c', '--config', type=str, default=None,
                     help='A yaml configuration file with all training parameters.')
 
 # Initialize parameters
-# data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_encoder_02-12-22'
 # data_dir = './tomo_data/datasets_encoder_02-12-22'
-data_dir = './tomo_data/datasets_encoder_TF_16-12-22'
+# data_dir = './tomo_data/datasets_encoder_TF_16-12-22'
+data_dir = './tomo_data/datasets_encoder_TF_03-02-23'
+
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
@@ -55,10 +56,9 @@ train_cfg = {
     'lr': 1e-3,
     'dataset%': 1,
     'normalization': 'minmax',
-    'img_normalize': 'minmax',
+    'img_normalize': 'off',
     # 'loss_weights': [0, 1, 2, 3, 4, 5, 6],
     'loss_weights': [1],
-
     'batch_size': 32
 }
 
@@ -76,6 +76,7 @@ model_cfg = {
         'dropout': 0.,
         'lr': 1e-3,
         'normalization': 'minmax',
+        'img_normalize': 'off',
         'batch_size': 32
     },
     # Best enErr config --> 1.54e-05 val_loss
@@ -91,6 +92,7 @@ model_cfg = {
         'dropout': 0.,
         'lr': 1e-3,
         'normalization': 'minmax',
+        'img_normalize': 'off',
         'batch_size': 32
     },
     # Best bl config --> 1.83e-04 val_loss
@@ -106,11 +108,12 @@ model_cfg = {
         'dropout': 0.,
         'lr': 1e-3,
         'normalization': 'minmax',
+        'img_normalize': 'off',
         'batch_size': 32
     },
     # Best inten config --> 7.57e-02 val_loss
     'inten': {
-        'epochs': 30,
+        'epochs': 60,
         'cropping': [6, 6],
         'filters': [8, 16, 32],
         'kernel_size': [13, 7, 3],
@@ -121,6 +124,7 @@ model_cfg = {
         'dropout': 0.,
         'lr': 1e-3,
         'normalization': 'minmax',
+        'img_normalize': 'off',
         'batch_size': 32
     },
     # best Vrf config --> 2.54e-05 val loss
@@ -136,6 +140,7 @@ model_cfg = {
         'dropout': 0.,
         'lr': 1e-3,
         'normalization': 'minmax',
+        'img_normalize': 'off',
         'batch_size': 32
     },
     # best mu config --> 8.00e-04 val loss
@@ -151,6 +156,7 @@ model_cfg = {
         'dropout': 0.0,
         'lr': 1e-3,
         'normalization': 'minmax',
+        'img_normalize': 'off',
         'batch_size': 32
     },
     # best VrfSPS config --> 7.83e-04 val loss
@@ -166,6 +172,7 @@ model_cfg = {
         'dropout': 0.0,
         'lr': 1e-3,
         'normalization': 'minmax',
+        'img_normalize': 'off',
         'batch_size': 32
     }
 }

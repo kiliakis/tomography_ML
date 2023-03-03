@@ -5,34 +5,54 @@ import pickle as pk
 from utils import extract_data_Fromfolder
 from utils import loadTF, calc_bin_centers
 from sklearn.model_selection import train_test_split
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+import argparse
 
 IMG_OUTPUT_SIZE = 128
 zeropad = 14
 start_turn = 1  # skip first turn from theo simulations
 skipturns = 3
-APPLY_TF = True
 
-# Read normalized sim data or generate them?
-# eos = '/home/kiliakis/cernbox'
+# Input output directories
 eos = '/eos/user/k/kiliakis/'
-
 simulations_dir = eos + '/tomo_data/results_tomo_02-12-22'
-save_dir = eos + '/tomo_data/datasets_encoder_TF_16-12-22'
+save_dir = eos + '/tomo_data/datasets_encoder_TF_03-02-23'
 
-# For traning, test and validation, out of all cases simulated (9229)
-num_Cases = -1
+parser = argparse.ArgumentParser(
+    description='Generate the encoder data from the raw simulation data')
 
-skip_first = 12024  # skip the first simulation dirs, useful for resuming after a crash
-last = 12448
-# out of the 100 turns selected by case (1 out of 3, so in max 300 turns)
-# num_Turns_Case = 50
-# num_Turns_Case_test = 1
-training_ratio = 0.90
+parser.add_argument('-f', '--first', type=int, default=0,
+                    help='The first simulation dir.')
+
+parser.add_argument('-l', '--last', type=int, default=-1,
+                    help='The last simulation dir to use. -1 to process all of them.')
+
+parser.add_argument('-d', '--dry-run', type=int, default=0,
+                    help='Only collect stats, do not actually create the directories.')
+
+parser.add_argument('-tf', '--transfer-function', type=int, default=1,
+                    help='Apply transfer function.')
+
+parser.add_argument('-train', '--train-ratio', type=float, default=0.85,
+                    help='The ratio of training samples/ all samples.')
+
+
+# E_normFactor = 23231043000.0
+E_normFactor = 25000000000.0
+# B_normFactor = 768246000.0
+B_normFactor = 800000000.0
+# T_normFactor = 25860460000.0
+T_normFactor = 28000000000.0
 
 if __name__ == '__main__':
+    args = parser.parse_args()
+    skip_first = args.first
+    skip_last  = args.last
+    dry_run = args.dry_run
+    apply_tf = args.transfer_function
+    training_ratio = args.train_ratio
 
-    if APPLY_TF:
+    if apply_tf:
         # This part is related to the TF convolution
         cut_left = 0
         cut_right = 2*np.pi
@@ -63,10 +83,6 @@ if __name__ == '__main__':
     # Get list of all sim directories
     all_sim_dirs = os.listdir(simulations_dir)
 
-    # Keep the first num_Cases dirs
-    if num_Cases > 0 and len(all_sim_dirs) > num_Cases:
-        all_sim_dirs = all_sim_dirs[:num_Cases]
-
     # Split dirs in train, test and validation sets
     train_dirs, test_dirs = train_test_split(all_sim_dirs,
                                              train_size=training_ratio,
@@ -76,20 +92,23 @@ if __name__ == '__main__':
                                              train_size=0.5,
                                              random_state=1)
     i = 0
+    E_maxs = []
+    T_maxs = []
+    B_maxs = []
+
     for SAVE_PATH, data_dirs in [(TRAINING_PATH, train_dirs),
                                  (VALIDATION_PATH, valid_dirs),
                                  (TESTING_PATH, test_dirs)]:
         print('Saving data to: ', SAVE_PATH)
         for fn in data_dirs:
             if i < skip_first:
-                # i += num_Turns_Case
                 i += 1
                 continue
-            if last > 0 and i >= last:
+            if skip_last > 0 and i >= skip_last:
                 break
             print(i, fn)
             try:
-                if APPLY_TF:
+                if apply_tf:
                     paramsDict, PS_imgs, sel_turns, E_img, T_img, PS_img_dec = \
                         extract_data_Fromfolder(fn, simulations_dir, IMG_OUTPUT_SIZE, zeropad,
                                                 start_turn, skipturns, version=4,
@@ -102,41 +121,52 @@ if __name__ == '__main__':
 
             except Exception as e:
                 print('NOT VALID: ', fn, e)
+                i+=1
+                continue
 
             # Get max values
-            E_normFactor = np.max(E_img)
-            T_normFactor = np.max(T_img)
-            B_normFactor = np.max(PS_img_dec.flatten())
+            # E_normFactor = np.max(E_img)
+            # T_normFactor = np.max(T_img)
+            # B_normFactor = np.max(PS_img_dec.flatten())
 
-            # Normalize data
-            E_img = E_img / E_normFactor
-            T_img = T_img / T_normFactor
-            PS_img_dec = PS_img_dec / B_normFactor
+            E_maxs.append(E_normFactor)
+            T_maxs.append(T_normFactor)
+            B_maxs.append(B_normFactor)
 
-            # Save norm factors
-            paramsDict['E_normFactor'] = E_normFactor
-            paramsDict['T_normFactor'] = T_normFactor
-            paramsDict['B_normFactor'] = B_normFactor
+            if not dry_run:
+                # Normalize data
+                E_img = E_img / E_normFactor
+                T_img = T_img / T_normFactor
+                PS_img_dec = PS_img_dec / B_normFactor
 
-            # Construct dictionary to pickle
-            normSimDict = {'fn': fn,
-                           'params': paramsDict,
-                           #    'skipturns': skipturns,
-                           'turns': sel_turns,
-                           #    'E_img': E_img,
-                           'T_img': T_img,
-                           #    'B_img': PS_img_dec
-                           }
+                # Save norm factors
+                paramsDict['E_normFactor'] = E_normFactor
+                paramsDict['T_normFactor'] = T_normFactor
+                paramsDict['B_normFactor'] = B_normFactor
 
-            # for turn in [0]+random.choices(normSimDict['turns'][1:], k=num_Turns_Case):
-            tenK = os.path.join(SAVE_PATH, f'{int(i // 10000):02d}x10K')
-            os.makedirs(tenK, exist_ok=True)
-            pk.dump({
-                    'turn': 0,
-                    'T_img': normSimDict['T_img'],
-                    'params': normSimDict['params'],
-                    'fn': normSimDict['fn'],
-                    'PS': 0},
-                    open(os.path.join(tenK, "{:06d}.pk".format(i)), "wb"))
+                # Construct dictionary to pickle
+                normSimDict = {'fn': fn,
+                            'params': paramsDict,
+                            'turns': sel_turns,
+                            'T_img': T_img,
+                            #    'skipturns': skipturns,
+                            #    'E_img': E_img,
+                            #    'B_img': PS_img_dec
+                            }
+
+                # for turn in [0]+random.choices(normSimDict['turns'][1:], k=num_Turns_Case):
+                tenK = os.path.join(SAVE_PATH, f'{int(i // 10000):02d}x10K')
+                os.makedirs(tenK, exist_ok=True)
+                pk.dump({
+                        'turn': 0,
+                        'T_img': normSimDict['T_img'],
+                        'params': normSimDict['params'],
+                        'fn': normSimDict['fn'],
+                        'PS': 0},
+                        open(os.path.join(tenK, "{:06d}.pk".format(i)), "wb"))
 
             i += 1
+
+    print(f'E_max: {np.max(E_normFactor)}')
+    print(f'T_max: {np.max(T_normFactor)}')
+    print(f'B_max: {np.max(B_normFactor)}')
