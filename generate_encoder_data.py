@@ -91,6 +91,10 @@ if __name__ == '__main__':
     test_dirs, valid_dirs = train_test_split(test_dirs,
                                              train_size=0.5,
                                              random_state=1)
+    print('Total train: ', len(train_dirs))
+    print('Total test: ', len(test_dirs))
+    print('Total valid: ', len(valid_dirs))
+    
     i = 0
     E_maxs = []
     T_maxs = []
