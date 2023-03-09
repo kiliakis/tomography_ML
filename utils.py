@@ -210,11 +210,15 @@ def sample_files(path, percent, keep_every=1):
 
 
 
-def load_encdec_data(pk_file, normalization, normalize=True, img_normalize='default'):
+def load_encdec_data(pk_file, normalization, normalize=True, img_normalize='default',
+                     ps_normalize='default'):
     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
     T_img = np.reshape(T_img, T_img.shape+(1,))
     PS = np.reshape(PS, PS.shape+(1,))
-    PS = normalizeIMG(PS)
+    if ps_normalize == 'default':
+        PS = normalizeIMG(PS)
+    elif ps_normalize == 'off':
+        pass
     # turn_num = normalizeTurn(turn_num)
     turn_num = minmax_normalize_param(turn_num, 1, 298, target_range=(0, 1))
     if img_normalize=='default':
@@ -268,14 +272,17 @@ def load_encoder_data(pk_file, normalization, normalize=True, img_normalize='def
     return (T_img, [phEr, enEr, bl, inten, Vrf, mu, VrfSPS])
 
 
-def load_decoder_data(pk_file, normalization):
+def load_decoder_data(pk_file, normalization, ps_normalize='default'):
     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
     # T_img = np.reshape(T_img, T_img.shape+(1,))
     PS = np.reshape(PS, PS.shape+(1,))
     # turn_num = normalizeTurn(turn_num)
     turn_num = minmax_normalize_param(turn_num, 1, 298, target_range=(0, 1))
+    if ps_normalize == 'default':
+        PS = normalizeIMG(PS)
+    elif ps_normalize == 'off':
+        pass
 
-    PS = normalizeIMG(PS)
     phEr = float(params_dict['phEr'])
     enEr = float(params_dict['enEr'])
     bl = float(params_dict['bl'])
@@ -312,7 +319,8 @@ def load_decoder_data(pk_file, normalization):
 #     return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, Vrf, mu, VrfSPS, T_normFactor, B_normFactor
 
 
-def encdec_files_to_tensors(files, normalize=True, normalization='default', img_normalize='default'):
+def encdec_files_to_tensors(files, normalize=True, normalization='default', 
+                            img_normalize='default', ps_normalize='default'):
     waterfall_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
     turn_arr = np.zeros(len(files), dtype=np.float32)
     latent_arr = np.zeros((len(files), 7), dtype=np.float32)
@@ -323,7 +331,8 @@ def encdec_files_to_tensors(files, normalize=True, normalization='default', img_
             waterfall, turn, latents, ps = load_encdec_data(file,
                                                         normalize=normalize,
                                                         normalization=normalization,
-                                                        img_normalize=img_normalize)
+                                                        img_normalize=img_normalize,
+                                                        ps_normalize=ps_normalize)
         except Exception as e:
             print(f'Skipping file {file}, ', e)
             continue
@@ -360,13 +369,14 @@ def encoder_files_to_tensors(files, normalize=True, normalization='default', img
     return x_train, y_train
 
 
-def decoder_files_to_tensors(files, normalization='default'):
+def decoder_files_to_tensors(files, normalization='default', ps_normalize='default'):
     feature_arr = np.zeros((len(files), 8), dtype=np.float32)
     output_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
     i = 0
     for file in files:
         try:
-            features, output = load_decoder_data(file, normalization=normalization)
+            features, output = load_decoder_data(file, normalization=normalization,
+                                                 ps_normalize=ps_normalize)
         except Exception as e:
             print(f'Skipping file {file}, ', e)
             continue

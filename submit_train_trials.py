@@ -7,9 +7,9 @@ import argparse
 
 submission_system = 'condor'
 USERNAME = 'kiliakis'
-RUNTIME = 2          # in hours
+RUNTIME = 8         # in hours
 USE_GPU = 1          # request for a gpu node
-CPU_CORES = 1        # number of CPU cores
+CPU_CORES = 4        # number of CPU cores
 if submission_system == 'condor':
     WORK = f"/afs/cern.ch/work/{USERNAME[0]}/{USERNAME}"
     # WORK = f"/eos/user/{USERNAME[0]}/{USERNAME}"
@@ -25,90 +25,91 @@ TRIALS_DIR = os.path.join(PROJECT_DIR, 'trials')
 
 configs = [
 
+    # {
+    #     'encoder': {
+    #         'epochs': 100,
+    #         'strides': [2, 2],
+    #         'activation': 'relu',
+    #         'pooling': None, 'pooling_size': [2, 2],
+    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+    #         'dropout': 0.0,
+    #         'loss': 'mse', 
+    #         'lr': 1e-3,
+    #         'dataset%': 1,
+    #         'normalization': 'minmax',
+    #         'img_normalize': 'off',
+    #         'loss_weights': [1],
+    #         'batch_size': 32
+    #     },
+    #     'model_cfg': {
+    #         'phEr': {
+    #             'cropping': [0, 0],
+    #             'filters': [4, 8],
+    #             'kernel_size': [3, 3],
+    #             'dense_layers': [1024, 256, 32],
+    #         },
+    #         'enEr': {
+    #             'cropping': [0, 0],
+    #             'filters': [4, 8, 16],
+    #             'kernel_size': [5, 5, 5],
+    #             'dense_layers': [1024, 512, 64],
+    #         },
+    #         'bl': {
+    #             'cropping': [0, 0],
+    #             'filters': [8, 16, 32],
+    #             'kernel_size': [5, 5, 5],
+    #             'dense_layers': [1024, 512, 64],
+    #         },
+    #         'inten': {
+    #             'cropping': [0, 0],
+    #             'filters': [8, 16, 32],
+    #             'kernel_size': [5, 5, 5],
+    #             'dense_layers': [1024, 256, 64],
+    #         },
+    #         'Vrf': {
+    #             'cropping': [6, 6],
+    #             'filters': [8, 16, 32],
+    #             'kernel_size': [5, 5, 5],
+    #             'dense_layers': [1024, 256, 64],
+    #         },
+    #         'mu': {
+    #             'cropping': [0, 0],
+    #             'filters': [8, 16, 32],
+    #             'kernel_size': [9, 9, 9],
+    #             'dense_layers': [1024, 256, 128],
+    #         },
+    #         'VrfSPS': {
+    #             'cropping': [0, 0],
+    #             'filters': [4, 16, 32],
+    #             'kernel_size': [7, 7, 7],
+    #             'dense_layers': [1024, 256, 64],
+    #         },
+    #     }
+    # },
+
     {
-        'encoder': {
-            'epochs': 60,
-            'strides': [2, 2],
+        'decoder': {
+            'epochs': 100,
+            'dense_layers': [8, 256, 1024],
+            'filters': [32, 16, 8, 1],
+            'kernel_size': 5,
             'activation': 'relu',
-            'pooling': None, 'pooling_size': [2, 2],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+            'strides': [2, 2],
+            'final_kernel_size': 5,
+            'final_activation': 'tanh',
             'dropout': 0.0,
-            'loss': 'mse', 
+            'loss': 'mse',
             'lr': 1e-3,
-            'dataset%': 1,
+            'dataset%': 0.6,
             'normalization': 'minmax',
-            'img_normalize': 'off',
-            'loss_weights': [0, 1, 2, 3, 4, 5, 6],
-            'batch_size': 32
+            'ps_normalize': 'off',
+            'loss_weights': [0, 1, 2, 3, 4, 5, 6, 7],
         },
-        'model_cfg': {
-            'phEr': {
-                'cropping': [0, 0],
-                'filters': [4, 8],
-                'kernel_size': [3, 3],
-                'dense_layers': [1024, 256, 32],
-            },
-            'enEr': {
-                'cropping': [6, 6],
-                'filters': [8, 16, 32],
-                'kernel_size': [3, 3, 3],
-                'dense_layers': [1024, 256, 64],
-            },
-            'bl': {
-                'cropping': [12, 12],
-                'filters': [8, 16, 32],
-                'kernel_size': [(13, 3), (7, 3), (3, 3)],
-                'dense_layers': [1024, 256, 64],
-            },
-            'inten': {
-                'cropping': [0, 0],
-                'filters': [8, 16, 32],
-                'kernel_size': [5, 5, 5],
-                'dense_layers': [1024, 256, 64],
-            },
-            'Vrf': {
-                'cropping': [6, 6],
-                'filters': [8, 16, 32],
-                'kernel_size': [13, 7, 3],
-                'dense_layers': [1024, 256, 64],
-            },
-            'mu': {
-                'cropping': [0, 0],
-                'filters': [8, 16, 32],
-                'kernel_size': [5, 5, 5],
-                'dense_layers': [1024, 256, 64],
-            },
-            'VrfSPS': {
-                'cropping': [6, 6],
-                'filters': [8, 16, 32],
-                'kernel_size': [5, 5, 5],
-                'dense_layers': [1024, 256, 64],
-            },
-        }
     },
     # {
     #     'decoder': {
     #         'epochs': 100,
-    #         'dense_layers': [7, 256, 1024],
-    #         'filters': [32, 16, 8, 1],
-    #         'kernel_size': 7,
-    #         'activation': 'relu',
-    #         'strides': [2, 2],
-    #         'final_kernel_size': 5,
-    #         'final_activation': 'tanh',
-    #         'dropout': 0.0,
-    #         'loss': 'mse', 
-    #         'lr': 1e-3,
-    #         'dataset%': 0.75,
-    #         'normalization': 'minmax',
-    #         'loss_weights': [0, 1, 2, 3, 5, 6, 7],
-
-    #     },
-    # },
-    # {
-    #     'decoder': {
-    #         'epochs': 100,
-    #         'dense_layers': [7, 256, 1024],
+    #         'dense_layers': [8, 256, 1024],
     #         'filters': [32, 16, 8, 1],
     #         'kernel_size': 7,
     #         'activation': 'relu',
@@ -120,15 +121,17 @@ configs = [
     #         'lr': 1e-3,
     #         'dataset%': 0.6,
     #         'normalization': 'minmax',
-    #         'loss_weights': [0, 1, 2, 3, 5, 6, 7],
+    #         'ps_normalize': 'off',
+    #         'loss_weights': [0, 1, 2, 3, 4, 5, 6, 7],
+
     #     },
     # },
     # {
     #     'decoder': {
     #         'epochs': 100,
-    #         'dense_layers': [8, 512, 2048],
+    #         'dense_layers': [8, 256, 1024],
     #         'filters': [32, 16, 8, 1],
-    #         'kernel_size': 7,
+    #         'kernel_size': 9,
     #         'activation': 'relu',
     #         'strides': [2, 2],
     #         'final_kernel_size': 5,
@@ -136,8 +139,10 @@ configs = [
     #         'dropout': 0.0,
     #         'loss': 'mse', 
     #         'lr': 1e-3,
-    #         'dataset%': 0.7,
+    #         'dataset%': 0.6,
     #         'normalization': 'minmax',
+    #         'ps_normalize': 'off',
+    #         'loss_weights': [0, 1, 2, 3, 4, 5, 6, 7],
     #     },
     # },
 

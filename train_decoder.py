@@ -24,9 +24,8 @@ parser.add_argument('-c', '--config', type=str, default=None,
                     help='A yaml configuration file with all training parameters.')
 
 # Initialize parameters
-# data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_decoder_02-12-22'
-# data_dir = './tomo_data/datasets_decoder_02-12-22'
-data_dir = './tomo_data/datasets_decoder_TF_16-12-22'
+# data_dir = './tomo_data/datasets_decoder_TF_16-12-22'
+data_dir = './tomo_data/datasets_decoder_TF_03-03-23'
 
 
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
@@ -37,8 +36,8 @@ DATA_LOAD_METHOD = 'TENSOR'
 IMG_OUTPUT_SIZE = 128
 BATCH_SIZE = 32  # 8
 # BUFFER_SIZE = 32768
-latent_dim = 6  # 6 + the new VrfSPS - inten
-additional_latent_dim = 1
+latent_dim = 7  # the var_names - turn
+additional_latent_dim = 1 # the turn
 
 # Train specific
 train_cfg = {
@@ -53,9 +52,10 @@ train_cfg = {
     'dropout': 0.,
     'loss': 'mse',
     'normalization': 'minmax',
+    'ps_normalize': 'off',
     'lr': 1e-3,
     'dataset%': 0.5,
-    'loss_weights': [0, 1, 2, 3, 5, 6, 7],
+    'loss_weights': [0, 1, 2, 3, 4, 5, 6, 7],
 }
 
 if __name__ == '__main__':
@@ -123,7 +123,8 @@ if __name__ == '__main__':
                 TRAINING_PATH, train_cfg['dataset%'], keep_every=1)
             print('Number of Training files: ', len(file_names))
             x_train, y_train = decoder_files_to_tensors(
-                file_names, normalization=train_cfg['normalization'])
+                file_names, normalization=train_cfg['normalization'],
+                ps_normalize=train_cfg['ps_normalize'])
 
             # Repeat for validation data
             file_names = sample_files(
@@ -131,7 +132,8 @@ if __name__ == '__main__':
             print('Number of Validation files: ', len(file_names))
 
             x_valid, y_valid = decoder_files_to_tensors(
-                file_names, normalization=train_cfg['normalization'])
+                file_names, normalization=train_cfg['normalization'],
+                ps_normalize=train_cfg['ps_normalize'])
             
             # drop column from y_train, y_valid
             x_train = tf.concat([tf.expand_dims(tf.gather(x_train, i, axis=1), axis=1)
@@ -153,7 +155,7 @@ if __name__ == '__main__':
             # this returns pairs of tensors with shape (128, 128, 1) and (8,)
             train_dataset = train_dataset.map(lambda x: tf.py_function(
                 load_decoder_data,
-                [x, train_cfg['normalization']],
+                [x, train_cfg['normalization'], train_cfg['ps_normalize']],
                 [tf.float32, tf.float32]))
             # 4. Ignore errors in case they appear
             train_dataset = train_dataset.apply(
@@ -173,7 +175,7 @@ if __name__ == '__main__':
             # this returns pairs of tensors with shape (128, 128, 1) and (8,)
             valid_dataset = valid_dataset.map(lambda x: tf.py_function(
                 load_decoder_data,
-                [x, train_cfg['normalization']],
+                [x, train_cfg['normalization'], train_cfg['ps_normalize']],
                 [tf.float32, tf.float32]))
 
             valid_dataset = valid_dataset.apply(

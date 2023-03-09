@@ -1,5 +1,6 @@
 # Train the ML model
-from utils import sample_files, encoder_files_to_tensors
+from utils import sample_files, plot_loss, load_encoder_data
+from utils import encoder_files_to_tensors
 from models import EncoderSingle
 from itertools import product
 import pickle
@@ -17,13 +18,13 @@ var_names = ['phEr', 'enEr', 'bl',
              'inten', 'Vrf', 'mu', 'VrfSPS']
 # Initialize parameters
 # data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_encoder_02-12-22'
-data_dir = './tomo_data/datasets_encoder_02-12-22'
+data_dir = './tomo_data/datasets_encoder_TF_03-03-23'
 
 IMG_OUTPUT_SIZE = 128
 BATCH_SIZE = 32  # 8
 input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
 
-var_name = 'VrfSPS'
+var_name = 'enEr'
 
 # Train specific
 train_cfg = {
@@ -41,9 +42,10 @@ train_cfg = {
     'dropout': 0.1,
     'loss': 'mse',
     'lr': 1e-3,
-    'dataset%': 1,
+    'dataset%': 0.5,
     'normalization': 'minmax',
     'loss_weights': [var_names.index(var_name)],
+    'img_normalize': 'off',
     'batch_size': 32
 }
 
@@ -66,10 +68,8 @@ model_cfg = {
 
 param_space = {
     'cropping': [[0, 0]],
-    'kernel_size': [[5, 5, 5], [5, 3, 3], [3, 3, 3]],
-    'filters': [[2, 4, 8], [4, 8, 16],
-                [4, 4, 8], [2, 8, 16],
-                [4, 16, 32], [8, 16, 16],
+    'kernel_size': [[13, 9, 7], [9, 9, 9], [9, 7, 5], [7, 7, 7], [5, 5, 5]],
+    'filters': [[4, 8, 16], [4, 16, 32], [8, 16, 16],
                 [8, 16, 32]],
     'dense_layers': [[1024, 512, 128], [1024, 256, 128],
                      [1024, 512, 64], [1024, 256, 64], ]

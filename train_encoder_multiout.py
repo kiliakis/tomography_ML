@@ -63,9 +63,9 @@ train_cfg = {
 }
 
 model_cfg = {
-    # Best phEr config --> 3.07e-6 val_loss
+    # Best phEr config --> 2.41e-6 val_loss
     'phEr': {
-        'epochs': 60,
+        'epochs': 100,
         'dense_layers': [1024, 256, 32],
         'cropping': [0, 0],
         'kernel_size': [3, 3],
@@ -79,9 +79,9 @@ model_cfg = {
         'img_normalize': 'off',
         'batch_size': 32
     },
-    # Best enErr config --> 1.54e-05 val_loss
+    # Best enErr config --> 2.71e-05 val_loss
     'enEr': {
-        'epochs': 60,
+        'epochs': 100,
         'dense_layers': [1024, 256, 64],
         'cropping': [6, 6],
         'kernel_size': [3, 3, 3],
@@ -95,7 +95,7 @@ model_cfg = {
         'img_normalize': 'off',
         'batch_size': 32
     },
-    # Best bl config --> 1.83e-04 val_loss
+    # Best bl config --> 2.45e-04 val_loss
     'bl': {
         'epochs': 60,
         'cropping': [12, 12],
@@ -111,12 +111,12 @@ model_cfg = {
         'img_normalize': 'off',
         'batch_size': 32
     },
-    # Best inten config --> 7.57e-02 val_loss
+    # Best inten config --> 6.04e-06 val_loss
     'inten': {
         'epochs': 60,
-        'cropping': [6, 6],
+        'cropping': [0, 0],
         'filters': [8, 16, 32],
-        'kernel_size': [13, 7, 3],
+        'kernel_size': [5, 5, 5],
         'strides': [2, 2],
         'dense_layers': [1024, 256, 64],
         'activation': 'relu',
@@ -127,7 +127,7 @@ model_cfg = {
         'img_normalize': 'off',
         'batch_size': 32
     },
-    # best Vrf config --> 2.54e-05 val loss
+    # best Vrf config --> 2.30e-05 val loss
     'Vrf': {
         'epochs': 60,
         'cropping': [6, 6],
@@ -143,14 +143,14 @@ model_cfg = {
         'img_normalize': 'off',
         'batch_size': 32
     },
-    # best mu config --> 8.00e-04 val loss
+    # best mu config --> 6.33e-04 val loss
     'mu': {
-        'epochs': 60,
+        'epochs': 100,
         'cropping': [0, 0],
         'filters': [8, 16, 32],
-        'kernel_size': [5, 5, 5],
+        'kernel_size': [13, 9, 7],
         'strides': [2, 2],
-        'dense_layers': [1024, 256, 64],
+        'dense_layers': [1024, 256, 128],
         'activation': 'relu',
         'pooling': None,
         'dropout': 0.0,
@@ -159,14 +159,14 @@ model_cfg = {
         'img_normalize': 'off',
         'batch_size': 32
     },
-    # best VrfSPS config --> 7.83e-04 val loss
+    # best VrfSPS config --> 1.25e-04 val loss
     'VrfSPS': {
-        'epochs': 60,
-        'cropping': [6, 6],
+        'epochs': 100,
+        'cropping': [0, 0],
         'filters': [8, 16, 32],
-        'kernel_size': [5, 5, 5],
+        'kernel_size': [7, 7, 7],
         'strides': [2, 2],
-        'dense_layers': [1024, 256, 32],
+        'dense_layers': [1024, 256, 64],
         'activation': 'relu',
         'pooling': None,
         'dropout': 0.0,
