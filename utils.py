@@ -555,7 +555,8 @@ def assess_decoder(predictions, turn_normalized, PS_image,
         plt.tight_layout()
         if savefig:
             plt.savefig(os.path.join(
-                plots_dir, f'assess_decoder_turn{turn}.jpg'), dpi=400)
+                plots_dir, f'assess_decoder_turn{turn}.jpg'), dpi=400,
+                bbox_inches='tight')
         else:
             plt.show()
         plt.close()
@@ -596,22 +597,26 @@ def getTimeProfiles_FromData_new(fname, Ib):
     with open(fname, 'rb') as f:
         timeScale_for_tomo = np.load(f)
         BunchProfiles = np.load(f)
-    BunchProfiles = BunchProfiles*Ib
+    # divide the profiles by the integral, multiply by intensity
+    BunchProfiles = BunchProfiles / np.sum(BunchProfiles, axis=0) * Ib
     return timeScale_for_tomo, BunchProfiles
 
 def getTimgForModelFromDataFile_new(fname, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=128, zeropad=14, start_turn=1, skipturns=3, centroid_offset=0):
     timeScale_for_tomo, BunchProfiles = getTimeProfiles_FromData_new(fname, Ib)
-    BunchProfiles = BunchProfiles/T_normFactor
+    # finally normalize with the T_normFactor (max intensity per slice)
+    BunchProfiles = BunchProfiles / T_normFactor
     sel_turns = np.arange(start_turn, skipturns *
                           (IMG_OUTPUT_SIZE-2*zeropad), skipturns).astype(np.int32)
     # print(sel_turns[0], sel_turns[-1])
     T_img = np.pad(BunchProfiles[:, sel_turns], ((zeropad-centroid_offset, zeropad +
                                                   centroid_offset), (zeropad, zeropad)), 'constant', constant_values=(0, 0))
-    T_img_ForModel = minMaxScaleIMG(np.reshape(T_img, T_img.shape+(1,)))
+    T_img_ForModel = np.reshape(T_img, T_img.shape+(1,))
+    # T_img_ForModel = minMaxScaleIMG(np.reshape(T_img, T_img.shape+(1,)))
 
     BunchProfiles = np.pad(BunchProfiles[:, start_turn:sel_turns[-1]+1], ((zeropad-centroid_offset, zeropad +
                                                   centroid_offset), (zeropad, zeropad)), 'constant', constant_values=(0, 0))
-    BunchProfiles = minMaxScaleIMG(np.reshape(BunchProfiles, BunchProfiles.shape+(1,)))
+    BunchProfiles = np.reshape(BunchProfiles, BunchProfiles.shape+(1,))
+    # BunchProfiles = minMaxScaleIMG(np.reshape(BunchProfiles, BunchProfiles.shape+(1,)))
 
     return T_img_ForModel, BunchProfiles
 
@@ -626,7 +631,9 @@ def real_files_to_tensors(data_dir, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=12
     for file in files:
         fname = os.path.join(data_dir, file)
         try:
-            waterfall, bunch_profiles = getTimgForModelFromDataFile_new(fname)
+            waterfall, bunch_profiles = getTimgForModelFromDataFile_new(fname,
+                                                                        Ib=Ib,
+                                                                        T_normFactor=T_normFactor)
         except Exception as e:
             print(f'Skipping file {fname}, ', e)
             continue
