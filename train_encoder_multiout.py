@@ -27,13 +27,13 @@ parser.add_argument('-c', '--config', type=str, default=None,
 # Initialize parameters
 # data_dir = './tomo_data/datasets_encoder_02-12-22'
 # data_dir = './tomo_data/datasets_encoder_TF_16-12-22'
-data_dir = './tomo_data/datasets_encoder_TF_03-03-23'
+data_dir = './tomo_data/datasets_encoder_TF_24-03-23'
 
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
 IMG_OUTPUT_SIZE = 128
-DATA_LOAD_METHOD='TENSOR' # it can be TENSOR or DATASET
+DATA_LOAD_METHOD='FAST_TENSOR' # it can be TENSOR or DATASET or FAST_TENSOR
 num_Turns_Case = 1
 var_names = ['phEr', 'enEr', 'bl',
              'inten', 'Vrf', 'mu', 'VrfSPS']
@@ -239,6 +239,7 @@ if __name__ == '__main__':
     os.makedirs(plots_dir, exist_ok=True)
     os.makedirs(cache_dir, exist_ok=True)
     try:
+        np.random.seed(0)
         start_t = time.time()
 
         if DATA_LOAD_METHOD=='TENSOR':
@@ -259,6 +260,31 @@ if __name__ == '__main__':
             x_valid, y_valid = encoder_files_to_tensors(
                 file_names, normalization=train_cfg['normalization'],
                 img_normalize=train_cfg['img_normalize'])
+        elif DATA_LOAD_METHOD == 'FAST_TENSOR':
+            # Load training data
+            with np.load(os.path.join(ML_dir, 'training.npz')) as data:
+                x, y = data['x'], data['y']
+            # Keep a smaller percentage
+            if train_cfg['dataset%'] < 1 and train_cfg['dataset%'] > 0:
+                points = len(y)
+                keep_points = np.random.choice(
+                    points, int(points * train_cfg['dataset%']), replace=False)
+                x, y = x[keep_points], y[keep_points]
+            x_train, y_train = tf.convert_to_tensor(x), tf.convert_to_tensor(y)
+            print('Number of Training files: ', len(y_train))
+
+            # Repeat for validation data
+            with np.load(os.path.join(ML_dir, 'validation.npz')) as data:
+                x, y = data['x'], data['y']
+            # Keep a smaller percentage
+            if train_cfg['dataset%'] < 1 and train_cfg['dataset%'] > 0:
+                points = len(y)
+                keep_points = np.random.choice(
+                    points, int(points * train_cfg['dataset%']), replace=False)
+                x, y = x[keep_points], y[keep_points]
+            x_valid, y_valid = tf.convert_to_tensor(x), tf.convert_to_tensor(y)
+            print('Number of Validation files: ', len(y_valid))
+
         elif DATA_LOAD_METHOD=='DATASET':
             # Create the datasets
             # 1. Randomly select the training data
@@ -323,7 +349,7 @@ if __name__ == '__main__':
             model = EncoderSingle(input_shape=input_shape, output_name=var_name, **cfg)
             print(model.model.summary())
 
-            if DATA_LOAD_METHOD=='TENSOR':
+            if 'TENSOR' in DATA_LOAD_METHOD:
                 models[var_name] = {'model': model.model,
                                     'train': tf.gather(y_train, i, axis=1),
                                     'valid': tf.gather(y_valid, i, axis=1)}
@@ -349,7 +375,7 @@ if __name__ == '__main__':
                                                     patience=5, restore_best_weights=True)
             save_best = keras.callbacks.ModelCheckpoint(filepath=os.path.join(weights_dir, f'encoder_{var_name}.h5'),
                                                         monitor='val_loss', save_best_only=True)
-            if DATA_LOAD_METHOD=='TENSOR':
+            if 'TENSOR' in DATA_LOAD_METHOD:
                 history = model.fit(
                     x=x_train, y=models[var_name]['train'], 
                     epochs=train_cfg['epochs'],

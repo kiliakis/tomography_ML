@@ -6,7 +6,8 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import re
 import glob
-
+from scipy import signal
+from scipy.interpolate import interp1d
 
 def get_best_model_timestamp(path, model='enc'):
     from sort_trial_summaries import extract_trials
@@ -81,7 +82,7 @@ def calc_bin_centers(cut_left, cut_right, n_slices):
     return bin_centers
 
 
-def loadTF(path, beam=2, cut=52):
+def loadTF(path, beam=2, cut=100):
     path = path.format(beam)
     h5file = hp.File(path, 'r')
     freq_array = np.array(h5file["/TransferFunction/freq"])
@@ -110,7 +111,7 @@ def bunchProfile_TFconvolve(frames, timeScale, freq_array, TF_array):
     TF = np.interp(freq, np.fft.fftshift(freq_array), np.fft.fftshift(TF_array.real)) + \
         1j * np.interp(freq, np.fft.fftshift(freq_array),
                        np.fft.fftshift(TF_array.imag))
-
+    
     for i in range(Nframes):
         profile = frames[:, i]
         profile = profile - profile[0:10].mean()
@@ -146,16 +147,20 @@ def extract_data_Fromfolder(fn, simulations_dir, IMG_OUTPUT_SIZE, zeropad,
     with hp.File(os.path.join(os.path.join(simulations_dir, fn), 'saved_result.hdf5'), 'r') as sf:
         BunchProfiles = np.array(sf['bunchProfiles'])
 
-        # fig = plt.figure()
+        # fig = plt.figure(5)
         # plt.plot(time_scale, BunchProfiles[:, 0], label='before_tf')
         if (time_scale is not None) and (freq_array is not None) and (TF_array is not None):
             _, BunchProfiles = bunchProfile_TFconvolve(BunchProfiles, time_scale,
                                                        freq_array, TF_array)
+            # plt.figure(2)
+            # plt.plot(freq_array, np.abs(TF_array))
+            # plt.figure(5)
+            # plt.plot(time_scale, BunchProfiles[:, 0], label='after_tf')
 
         BunchProfiles = BunchProfiles / sf['columns'][0][3]*paramsDict['int']
 
-        # plt.plot(time_scale, BunchProfiles[:, 0], label='after_tf')
         # plt.legend()
+        # plt.show()
         # plt.savefig('plots/profile_before_after_tf.jpg', dpi=400)
         # plt.close()
 
@@ -562,36 +567,45 @@ def assess_decoder(predictions, turn_normalized, PS_image,
         plt.close()
 
 
-# def getTimeProfiles_FromData(fname, Ib):
-#     with open(fname, 'rb') as f:
-#         timeScale_for_tomo = np.load(f)
-#         BunchProfiles = np.load(f)
-#     BunchProfiles = BunchProfiles*Ib/np.sum(BunchProfiles[:, 0])
-#     return timeScale_for_tomo, BunchProfiles
+def correctTriggerOffsets(x, frames, triggerOffsets):
 
-# def getTimeProfiles_FromData_2(fname, Ib):
-#     with hp.File(fname, 'r') as sf:
-#         BunchProfiles = np.array(sf['bunchProfiles'])
-#         EnergyProfiles = np.array(sf['energyProfiles'])
-#         phaseSpace_density_array = np.array(sf['phaseSpace_density_array'])
-#         x_bin_center_array = np.array(sf['x_bin_center_array'])
-#         y_bin_center_array = np.array(sf['y_bin_center_array'])
-#     with open(fname, 'rb') as f:
-#         timeScale_for_tomo = np.load(f)
-#         BunchProfiles = np.load(f)
-#     BunchProfiles = BunchProfiles*Ib/np.sum(BunchProfiles[:, 0])
-#     return timeScale_for_tomo, BunchProfiles
+    NTurns = np.shape(frames)[1]
+    frames_new = np.zeros(np.shape(frames))
+    for i in np.arange(NTurns):
+        x_temp = x + triggerOffsets[i]
+        frame = frames[:, i]
+        extrap_value = np.mean(frame[0:10])
+        frame_interp = interp1d(x_temp, frame, bounds_error=False, fill_value=extrap_value)
+        frames_new[:, i] = frame_interp(x)
 
+    return frames_new
+       
+def getTriggerOffset(BunchProfiles, filter_n=12):
+    import matplotlib.pyplot as plt
+    dataPoints = np.shape(BunchProfiles)[0]
+    mass_centre = (BunchProfiles.T @ np.arange(dataPoints)) / np.sum(BunchProfiles, axis=0)
+    filtered = signal.filtfilt(np.ones(filter_n) / filter_n, 1, mass_centre)
+    return mass_centre - filtered
 
-# def getTimgForModelFromDataFile(fname, Ib, T_normFactor, IMG_OUTPUT_SIZE, zeropad, start_turn, skipturns, centroid_offset=0):
-#     timeScale_for_tomo, BunchProfiles = getTimeProfiles_FromData(fname, Ib)
-#     BunchProfiles = BunchProfiles/T_normFactor
-#     sel_turns = np.arange(start_turn, skipturns *
-#                           (IMG_OUTPUT_SIZE-2*zeropad), skipturns).astype(np.int32)
-#     T_img = np.pad(BunchProfiles[:, sel_turns], ((zeropad-centroid_offset, zeropad +
-#                                                   centroid_offset), (zeropad, zeropad)), 'constant', constant_values=(0, 0))
-#     T_img_ForModel = normalizeIMG(np.reshape(T_img, T_img.shape+(1,)))
-#     return T_img_ForModel
+def correctForTriggerOfsset(timeScale, singleBunchFrame, filter_n=12,  iterations=1):
+    import matplotlib.pyplot as plt
+    dt = timeScale[1] - timeScale[0]
+    singleBunchFrame_iter = singleBunchFrame
+    try:
+        for i in np.arange(iterations):
+            trigger_offsets = getTriggerOffset(singleBunchFrame_iter, filter_n=filter_n)
+            trigger_offsets *= dt
+            singleBunchFrame_iter = correctTriggerOffsets(timeScale, singleBunchFrame_iter, -trigger_offsets)
+        singleBunchFrame_new = singleBunchFrame_iter
+    except:
+        print("No filtering of the scope trigger offsets")
+        singleBunchFrame_new = singleBunchFrame
+
+    dataPoints = np.shape(singleBunchFrame_new)[0]
+    mass_centre = (singleBunchFrame_new.T @ np.arange(dataPoints)) / np.sum(singleBunchFrame_new, axis=0)
+
+    return  singleBunchFrame_new
+
 
 def getTimeProfiles_FromData_new(fname, Ib):
     with open(fname, 'rb') as f:
@@ -601,8 +615,16 @@ def getTimeProfiles_FromData_new(fname, Ib):
     BunchProfiles = BunchProfiles / np.sum(BunchProfiles, axis=0) * Ib
     return timeScale_for_tomo, BunchProfiles
 
-def getTimgForModelFromDataFile_new(fname, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=128, zeropad=14, start_turn=1, skipturns=3, centroid_offset=0):
+
+def getTimgForModelFromDataFile_new(fname, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=128, 
+                                    zeropad=14, start_turn=1, skipturns=3, 
+                                    centroid_offset=0, corrTriggerOffset=False):
     timeScale_for_tomo, BunchProfiles = getTimeProfiles_FromData_new(fname, Ib)
+    
+    # Apply correction
+    if corrTriggerOffset==True:
+        BunchProfiles = correctForTriggerOfsset(timeScale_for_tomo, BunchProfiles)
+
     # finally normalize with the T_normFactor (max intensity per slice)
     BunchProfiles = BunchProfiles / T_normFactor
     sel_turns = np.arange(start_turn, skipturns *
@@ -620,7 +642,9 @@ def getTimgForModelFromDataFile_new(fname, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_
 
     return T_img_ForModel, BunchProfiles
 
-def real_files_to_tensors(data_dir, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=128, zeropad=14, start_turn=1, skipturns=3, centroid_offset=0):
+def real_files_to_tensors(data_dir, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=128,
+                          zeropad=14, start_turn=1, skipturns=3, centroid_offset=0,
+                          corrTriggerOffset=False):
     files = os.listdir(data_dir)
     waterfall_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
     bunch_profiles_arr = np.zeros((len(files), 128, 326, 1), dtype=np.float32)
@@ -633,7 +657,8 @@ def real_files_to_tensors(data_dir, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=12
         try:
             waterfall, bunch_profiles = getTimgForModelFromDataFile_new(fname,
                                                                         Ib=Ib,
-                                                                        T_normFactor=T_normFactor)
+                                                                        T_normFactor=T_normFactor,
+                                                                        corrTriggerOffset=corrTriggerOffset)
         except Exception as e:
             print(f'Skipping file {fname}, ', e)
             continue

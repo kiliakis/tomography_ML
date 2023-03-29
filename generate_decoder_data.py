@@ -16,7 +16,7 @@ skipturns = 3
 # Input output directories
 eos = '/eos/user/k/kiliakis'
 simulations_dir = eos + '/tomo_data/results_tomo_02-12-22'
-save_dir = eos + '/tomo_data/datasets_decoder_TF_03-03-23'
+save_dir = eos + '/tomo_data/datasets_decoder_TF_24-03-23'
 
 parser = argparse.ArgumentParser(description='Generate decoder training/validation/testing data',
                                  usage='python generate_decoder_data.py')
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     if apply_tf:
         # This part is related to the TF convolution
         cut_left = 0
-        cut_right = 2*np.pi
+        cut_right = 2.5e-9
         n_slices = 100
 
         timescale = calc_bin_centers(cut_left, cut_right, n_slices)

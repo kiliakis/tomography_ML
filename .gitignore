@@ -22,4 +22,5 @@ simulations/
 logs/
 plots/
 hparam_dicts/
+hparam_trials/
 .ipynb_checkpoints/
