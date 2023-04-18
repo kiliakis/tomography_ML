@@ -1,7 +1,7 @@
 # Train the ML model
 import matplotlib.pyplot as plt
 from utils import sample_files, plot_loss, load_encoder_data
-from utils import encoder_files_to_tensors
+from utils import encoder_files_to_tensors, fast_tensor_load
 from models import EncoderSingle
 from itertools import product
 import pickle
@@ -159,10 +159,10 @@ if __name__ == '__main__':
 
     # Initialize train/ test / validation paths
     ML_dir = os.path.join(data_dir, 'ML_data')
+    assert os.path.exists(ML_dir)
+
     TRAINING_PATH = os.path.join(ML_dir, 'TRAINING')
     VALIDATION_PATH = os.path.join(ML_dir, 'VALIDATION')
-    assert os.path.exists(TRAINING_PATH)
-    assert os.path.exists(VALIDATION_PATH)
 
     # create the directory to store the results
     os.makedirs(trial_dir, exist_ok=True)
@@ -193,28 +193,18 @@ if __name__ == '__main__':
             file_names, normalization=train_cfg['normalization'],
             img_normalize=train_cfg['img_normalize'])
     elif DATA_LOAD_METHOD == 'FAST_TENSOR':
-        # Load training data
-        with np.load(os.path.join(ML_dir, 'training.npz')) as data:
-            x, y = data['x'], data['y']
-        # Keep a smaller percentage
-        if train_cfg['dataset%'] < 1 and train_cfg['dataset%'] > 0:
-            points = len(y)
-            keep_points = np.random.choice(
-                points, int(points * train_cfg['dataset%']), replace=False)
-            x, y = x[keep_points], y[keep_points]
-        x_train, y_train = tf.convert_to_tensor(x), tf.convert_to_tensor(y)
+        assert train_cfg['normalization'] == 'minmax'
+        assert train_cfg['img_normalize'] == 'off'
+
+        TRAINING_PATH = os.path.join(ML_dir, 'training-??.npz')
+        VALIDATION_PATH = os.path.join(ML_dir, 'validation-??.npz')
+
+        x_train, y_train = fast_tensor_load(
+            TRAINING_PATH, train_cfg['dataset%'])
         print('Number of Training files: ', len(y_train))
 
-        # Repeat for validation data
-        with np.load(os.path.join(ML_dir, 'validation.npz')) as data:
-            x, y = data['x'], data['y']
-        # Keep a smaller percentage
-        if train_cfg['dataset%'] < 1 and train_cfg['dataset%'] > 0:
-            points = len(y)
-            keep_points = np.random.choice(
-                points, int(points * train_cfg['dataset%']), replace=False)
-            x, y = x[keep_points], y[keep_points]
-        x_valid, y_valid = tf.convert_to_tensor(x), tf.convert_to_tensor(y)
+        x_valid, y_valid = fast_tensor_load(
+            VALIDATION_PATH, train_cfg['dataset%'])
         print('Number of Validation files: ', len(y_valid))
 
     else:

@@ -214,6 +214,31 @@ def sample_files(path, percent, keep_every=1):
     return ret_files
 
 
+def fast_tensor_load(path, percent=1.0, max_files=-1):
+    x_train, y_train = [], []
+    all_files = glob.glob(path)
+    if max_files > 0:
+        all_files = all_files[max_files]
+    # For every file that matches the regexp
+    for file in all_files:
+        print(f'Loading {file}')
+        # decompress and load file
+        with np.load(file) as data:
+            x, y = data['x'], data['y']
+        # Keep a smaller percentage if needed
+        if percent < 1 and percent > 0:
+            points = len(y)
+            keep_points = np.random.choice(
+                points, int(points * percent), replace=False)
+            x, y = x[keep_points], y[keep_points]
+        # append to list
+        x_train.append(tf.convert_to_tensor(x))
+        y_train.append(tf.convert_to_tensor(y))
+    # make the final tensor
+    x_train = tf.concat(x_train, axis=0)
+    y_train = tf.concat(y_train, axis=0)
+    return x_train, y_train
+
 
 def load_encdec_data(pk_file, normalization, normalize=True, img_normalize='default',
                      ps_normalize='default'):

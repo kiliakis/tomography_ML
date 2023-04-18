@@ -1,7 +1,7 @@
 # Train the ML model
 
 from models import Decoder
-from utils import sample_files
+from utils import sample_files, fast_tensor_load
 from utils import plot_loss, decoder_files_to_tensors, load_decoder_data
 import time
 import glob
@@ -32,7 +32,7 @@ timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 var_names = ['turn', 'phEr', 'enEr', 'bl', 'inten', 'Vrf', 'mu', 'VrfSPS']
 
 # Data specific
-DATA_LOAD_METHOD = 'TENSOR'
+DATA_LOAD_METHOD = 'FAST_TENSOR' # Can be TENSOR, FAST_TENSOR or DATASET
 IMG_OUTPUT_SIZE = 128
 BATCH_SIZE = 32  # 8
 # BUFFER_SIZE = 32768
@@ -103,10 +103,10 @@ if __name__ == '__main__':
 
     # Initialize train/ test / validation paths
     ML_dir = os.path.join(data_dir, 'ML_data')
+    assert os.path.exists(ML_dir)
+
     TRAINING_PATH = os.path.join(ML_dir, 'TRAINING')
     VALIDATION_PATH = os.path.join(ML_dir, 'VALIDATION')
-    assert os.path.exists(TRAINING_PATH)
-    assert os.path.exists(VALIDATION_PATH)
 
     # create the directory to store the results
     os.makedirs(trial_dir, exist_ok=True)
@@ -143,6 +143,22 @@ if __name__ == '__main__':
             x_valid = tf.concat([tf.expand_dims(tf.gather(x_valid, i, axis=1), axis=1)
                                 for i in train_cfg['loss_weights']], -1)
             print('x_valid shape: ', x_valid.shape)
+        
+        elif DATA_LOAD_METHOD == 'FAST_TENSOR':
+            assert train_cfg['normalization'] == 'minmax'
+            assert train_cfg['ps_normalize'] == 'off'
+
+            TRAINING_PATH = os.path.join(ML_dir, 'training-??.npz')
+            VALIDATION_PATH = os.path.join(ML_dir, 'validation-??.npz')
+
+            x_train, y_train = fast_tensor_load(
+                TRAINING_PATH, train_cfg['dataset%'])
+            print('Number of Training files: ', len(y_train))
+
+            x_valid, y_valid = fast_tensor_load(
+                VALIDATION_PATH, train_cfg['dataset%'])
+            print('Number of Validation files: ', len(y_valid))
+
         elif DATA_LOAD_METHOD=='DATASET':
             # First the training data
             file_names = sample_files(
@@ -158,8 +174,8 @@ if __name__ == '__main__':
                 [x, train_cfg['normalization'], train_cfg['ps_normalize']],
                 [tf.float32, tf.float32]))
             # 4. Ignore errors in case they appear
-            train_dataset = train_dataset.apply(
-                tf.data.experimental.ignore_errors())
+            # train_dataset = train_dataset.apply(
+            #     tf.data.experimental.ignore_errors())
             # cache the dataset
             # train_dataset = train_dataset.cache(
             #     os.path.join(cache_dir, 'train_cache'))
@@ -178,8 +194,8 @@ if __name__ == '__main__':
                 [x, train_cfg['normalization'], train_cfg['ps_normalize']],
                 [tf.float32, tf.float32]))
 
-            valid_dataset = valid_dataset.apply(
-                tf.data.experimental.ignore_errors())
+            # valid_dataset = valid_dataset.apply(
+            #     tf.data.experimental.ignore_errors())
             # cache the dataset
             # valid_dataset = valid_dataset.cache(
             #     os.path.join(cache_dir, 'valid_cache'))
@@ -211,7 +227,7 @@ if __name__ == '__main__':
 
         start_time = time.time()
         
-        if DATA_LOAD_METHOD=='TENSOR':
+        if 'TENSOR' in DATA_LOAD_METHOD:
             history = decoder.model.fit(
                 x=x_train, y=y_train,
                 epochs=train_cfg['epochs'],
