@@ -7,7 +7,7 @@ import argparse
 
 submission_system = 'condor'
 USERNAME = 'kiliakis'
-RUNTIME = 5         # in hours
+RUNTIME = 1         # in hours
 USE_GPU = 1          # request for a gpu node
 CPU_CORES = 1        # number of CPU cores
 if submission_system == 'condor':
@@ -35,10 +35,12 @@ configs = [
             'cropping': [0, 0],
             'kernel_size': [5, 5, 5],
             'activation': 'relu',
+            'strides': [2, 2],
+            'pooling': [None],
             'pooling_size': [2, 2],
             'pooling_strides': [1, 1],
             'pooling_padding': 'valid',
-            'dropout': 0.1,
+            'dropout': 0.,
             'loss': 'mse',
             'lr': 1e-3,
             'dataset%': 0.75,
@@ -50,16 +52,12 @@ configs = [
         'model_cfg': {
             'mu': {
                 'cropping': [[0, 0]],
-                'kernel_size': [[13, 9, 7], [13, 9, 5],
-                                [9, 9, 9], [9, 7, 5],
-                                [7, 7, 7], [7, 5, 5],
+                'kernel_size': [[13, 9, 7], [9, 9, 9], [7, 5, 5]
                                 ],
-                'filters': [[4, 16, 32], [4, 16, 64],
-                            [8, 16, 32], [8, 32, 64]],
-                'dense_layers': [[1024,256,128], [768, 256, 128], [768, 256, 64],
-                                 ],
-                'strides': [[2, 2]],
-                'pooling': ['Max']
+                'filters': [[4, 16, 64]],
+                'dense_layers': [[1024, 256, 128]],
+                'use_bias': [True, False],
+                'batchnorm': [True, False]
             },
         }
     },
@@ -75,7 +73,9 @@ configs = [
             'pooling_size': [2, 2],
             'pooling_strides': [1, 1],
             'pooling_padding': 'valid',
-            'dropout': 0.1,
+            'strides': [2, 2],
+            'pooling': [None],
+            'dropout': 0.,
             'loss': 'mse',
             'lr': 1e-3,
             'dataset%': 0.75,
@@ -87,17 +87,13 @@ configs = [
         'model_cfg': {
             'VrfSPS': {
                 'cropping': [[0, 0]],
-                'kernel_size': [[13, 9, 7], [13, 9, 5],
-                                [9, 9, 9], [9, 7, 5],
-                                [7, 7, 7], [7, 5, 5],
-                                ],
-                'filters': [[8, 16, 32], [8, 32, 64],
-                            [16, 32, 32], [16, 32, 64]],
-                'dense_layers': [[1024, 512, 256], [1024, 256, 128],
-                                 [768, 512, 128], [512, 256, 128], [512, 256, 64],
-                                 ],
-                'strides': [[2, 2]],
-                'pooling': ['Max']
+                'kernel_size': [[(13, 3), (9, 3), (5, 3)], 
+                                [9, 7, 5], [7, 5, 5], [13, 9, 7]
+                ],
+                'filters': [[8, 16, 32]],
+                'dense_layers': [[1024, 512, 256]],
+                'use_bias': [True, False],
+                'batchnorm': [True, False]
             },
         }
     },

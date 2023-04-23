@@ -59,8 +59,8 @@ if __name__ == '__main__':
         cut_left = 0
         cut_right = 2.5e-9
         n_slices = 100
-
-        timescale = calc_bin_centers(cut_left, cut_right, n_slices)
+        timescale = np.linspace(cut_left, cut_right, n_slices, endpoint=False)
+        # timescale = calc_bin_centers(cut_left, cut_right, n_slices)
         tf_path = eos + '/tomo_data/transfer_functions/TF_B{}.h5'
         freq_array, TF_array = loadTF(path=tf_path)
 

@@ -13,7 +13,7 @@ class EncoderSingle():
                  pooling=None, pooling_size=[2, 2],
                  pooling_strides=[1, 1], pooling_padding='valid',
                  dropout=0.0, learning_rate=0.001, loss='mse',
-                 metrics=['mae'],
+                 metrics=['mae'], use_bias=True, batchnorm=False,
                  **kwargs):
 
         self.output_name = output_name
@@ -39,7 +39,16 @@ class EncoderSingle():
             # Add the Convolution
             x = keras.layers.Conv2D(
                 filters=f, kernel_size=kernel_size[i], strides=strides[i],
-                activation=activation, name=f'{output_name}_CNN_{i+1}')(x)
+                use_bias=use_bias, 
+                name=f'{output_name}_CNN_{i+1}')(x)
+            
+            # Apply batchnormalization
+            if batchnorm:
+                x = tf.keras.layers.BatchNormalization()(x)
+            
+            # Apply the activation function
+            x = keras.activations.get(activation)(x)
+
             # Optional pooling after the convolution
             if pooling == 'Max':
                 x = keras.layers.MaxPooling2D(

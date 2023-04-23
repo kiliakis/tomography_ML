@@ -77,7 +77,7 @@ def unnormalize_param(norm_val, mu, sig):
 
 
 def calc_bin_centers(cut_left, cut_right, n_slices):
-    bin_centers = np.linspace(cut_left, cut_right, n_slices)
+    bin_centers = np.linspace(cut_left, cut_right, n_slices, endpoint=False)
     # bin_centers = (edges[:-1] + edges[1:])/2
     return bin_centers
 
@@ -606,14 +606,14 @@ def correctTriggerOffsets(x, frames, triggerOffsets):
     return frames_new
        
 def getTriggerOffset(BunchProfiles, filter_n=12):
-    import matplotlib.pyplot as plt
+    # import matplotlib.pyplot as plt
     dataPoints = np.shape(BunchProfiles)[0]
     mass_centre = (BunchProfiles.T @ np.arange(dataPoints)) / np.sum(BunchProfiles, axis=0)
     filtered = signal.filtfilt(np.ones(filter_n) / filter_n, 1, mass_centre)
     return mass_centre - filtered
 
-def correctForTriggerOfsset(timeScale, singleBunchFrame, filter_n=12,  iterations=1):
-    import matplotlib.pyplot as plt
+def correctForTriggerOffset(timeScale, singleBunchFrame, filter_n=12,  iterations=1):
+    # import matplotlib.pyplot as plt
     dt = timeScale[1] - timeScale[0]
     singleBunchFrame_iter = singleBunchFrame
     try:
@@ -622,12 +622,13 @@ def correctForTriggerOfsset(timeScale, singleBunchFrame, filter_n=12,  iteration
             trigger_offsets *= dt
             singleBunchFrame_iter = correctTriggerOffsets(timeScale, singleBunchFrame_iter, -trigger_offsets)
         singleBunchFrame_new = singleBunchFrame_iter
-    except:
+    except Exception as e:
+        print(e)
         print("No filtering of the scope trigger offsets")
         singleBunchFrame_new = singleBunchFrame
 
-    dataPoints = np.shape(singleBunchFrame_new)[0]
-    mass_centre = (singleBunchFrame_new.T @ np.arange(dataPoints)) / np.sum(singleBunchFrame_new, axis=0)
+    # dataPoints = np.shape(singleBunchFrame_new)[0]
+    # mass_centre = (singleBunchFrame_new.T @ np.arange(dataPoints)) / np.sum(singleBunchFrame_new, axis=0)
 
     return  singleBunchFrame_new
 
@@ -643,12 +644,15 @@ def getTimeProfiles_FromData_new(fname, Ib):
 
 def getTimgForModelFromDataFile_new(fname, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=128, 
                                     zeropad=14, start_turn=1, skipturns=3, 
-                                    centroid_offset=0, corrTriggerOffset=False):
+                                    centroid_offset=0, corrTriggerOffset=False,
+                                    filter_n=12, iterations=1):
     timeScale_for_tomo, BunchProfiles = getTimeProfiles_FromData_new(fname, Ib)
-    
+    # print(timeScale_for_tomo)
     # Apply correction
     if corrTriggerOffset==True:
-        BunchProfiles = correctForTriggerOfsset(timeScale_for_tomo, BunchProfiles)
+        # print(BunchProfiles.shape)
+        BunchProfiles = correctForTriggerOffset(timeScale_for_tomo, BunchProfiles,
+                                                filter_n=filter_n, iterations=iterations)
 
     # finally normalize with the T_normFactor (max intensity per slice)
     BunchProfiles = BunchProfiles / T_normFactor
@@ -669,7 +673,7 @@ def getTimgForModelFromDataFile_new(fname, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_
 
 def real_files_to_tensors(data_dir, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=128,
                           zeropad=14, start_turn=1, skipturns=3, centroid_offset=0,
-                          corrTriggerOffset=False):
+                          corrTriggerOffset=False, filter_n=12, iterations=1):
     files = os.listdir(data_dir)
     waterfall_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
     bunch_profiles_arr = np.zeros((len(files), 128, 326, 1), dtype=np.float32)
@@ -683,7 +687,9 @@ def real_files_to_tensors(data_dir, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=12
             waterfall, bunch_profiles = getTimgForModelFromDataFile_new(fname,
                                                                         Ib=Ib,
                                                                         T_normFactor=T_normFactor,
-                                                                        corrTriggerOffset=corrTriggerOffset)
+                                                                        corrTriggerOffset=corrTriggerOffset,
+                                                                        filter_n=filter_n, 
+                                                                        iterations=iterations)
         except Exception as e:
             print(f'Skipping file {fname}, ', e)
             continue
