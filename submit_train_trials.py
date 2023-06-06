@@ -7,7 +7,7 @@ import argparse
 
 submission_system = 'condor'
 USERNAME = 'kiliakis'
-RUNTIME = 2         # in hours
+RUNTIME = 1         # in hours
 USE_GPU = 1          # request for a gpu node
 CPU_CORES = 1        # number of CPU cores
 if submission_system == 'condor':
@@ -38,7 +38,7 @@ configs = [
             'normalization': 'minmax',
             'img_normalize': 'off',
             'batchnorm': False,
-            'loss_weights': [0, 1, 2, 3, 4],
+            'loss_weights': [6],
             'batch_size': 32
         },
         'model_cfg': {
@@ -86,46 +86,50 @@ configs = [
                 'use_bias': False,
             },
             'VrfSPS': {
-                'cropping': [0, 0],
-                'filters': [8, 16, 32],
-                'kernel_size': [(13, 3), (9, 3), (5, 3)],
-                'dense_layers': [1024, 512, 256],
+                'cropping': [14, 14],
+                'filters': [8, 32],
+                'kernel_size': [9, 5],
+                'dense_layers': [1024, 256, 128],
                 'use_bias': False,
+                'conv_padding': 'same'
             },
         }
     },
 
-    # {
-    #     'encoder': {
-    #         'epochs': 100,
-    #         'strides': [2, 2],
-    #         'activation': 'relu',
-    #         'pooling': None, 'pooling_size': [2, 2],
-    #         'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-    #         'dropout': 0.0,
-    #         'loss': 'mse',
-    #         'lr': 1e-3,
-    #         'dataset%': 1,
-    #         'normalization': 'minmax',
-    #         'img_normalize': 'off',
-    #         'loss_weights': [5, 6],
-    #         'batch_size': 32
-    #     },
-    #     'model_cfg': {
-    #         'mu': {
-    #             'cropping': [0, 0],
-    #             'filters': [4, 16, 64],
-    #             'kernel_size': [13, 9, 7],
-    #             'dense_layers': [1024, 256, 128],
-    #         },
-    #         'VrfSPS': {
-    #             'cropping': [0, 0],
-    #             'filters': [8, 16, 32],
-    #             'kernel_size': [13, 9, 7],
-    #             'dense_layers': [1024, 512, 256],
-    #         },
-    #     }
-    # },
+    {
+        'encoder': {
+            'epochs': 100,
+            'strides': [2, 2],
+            'activation': 'relu',
+            'pooling': None, 'pooling_size': [2, 2],
+            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
+            'dropout': 0.0,
+            'loss': 'mse',
+            'lr': 1e-3,
+            'dataset%': 1,
+            'normalization': 'minmax',
+            'img_normalize': 'off',
+            'loss_weights': [6],
+            'batch_size': 32
+        },
+        'model_cfg': {
+            'mu': {
+                'cropping': [0, 0],
+                'filters': [4, 16, 64],
+                'kernel_size': [13, 9, 7],
+                'dense_layers': [1024, 256, 128],
+            },
+            'VrfSPS': {
+                'cropping': [14, 14],
+                'filters': [8, 16, 32],
+                'kernel_size': [7, 7, 7],
+                'dense_layers': [1024, 512, 256],
+                'use_bias': False,
+                'conv_padding': 'same'
+            },
+        }
+    },
+
 
     # {
     #     'decoder': {

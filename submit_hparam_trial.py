@@ -27,44 +27,47 @@ var_names = ['phEr', 'enEr', 'bl',
              'inten', 'Vrf', 'mu', 'VrfSPS']
 
 configs = [
-    {
-        'encoder': {
-            'epochs': 25,
-            'dense_layers': [1024, 512, 128],
-            'filters': [8, 16, 32],
-            'cropping': [0, 0],
-            'kernel_size': [5, 5, 5],
-            'activation': 'relu',
-            'strides': [2, 2],
-            'pooling': [None],
-            'pooling_size': [2, 2],
-            'pooling_strides': [1, 1],
-            'pooling_padding': 'valid',
-            'dropout': 0.,
-            'loss': 'mse',
-            'lr': 1e-3,
-            'dataset%': 0.75,
-            'normalization': 'minmax',
-            'img_normalize': 'off',
-            'loss_weights': [5],
-            'batch_size': 32
-        },
-        'model_cfg': {
-            'mu': {
-                'cropping': [[0, 0]],
-                'kernel_size': [[13, 9, 7], [9, 9, 9], [7, 5, 5]
-                                ],
-                'filters': [[4, 16, 64]],
-                'dense_layers': [[1024, 256, 128]],
-                'use_bias': [True, False],
-                'batchnorm': [True, False]
-            },
-        }
-    },
+    # {
+    #     'encoder': {
+    #         'epochs': 50,
+    #         'dense_layers': [1024, 512, 128],
+    #         'filters': [8, 16, 32],
+    #         'cropping': [0, 0],
+    #         'kernel_size': [5, 5, 5],
+    #         'activation': 'relu',
+    #         'strides': [2, 2],
+    #         'pooling': [None],
+    #         'pooling_size': [2, 2],
+    #         'pooling_strides': [1, 1],
+    #         'pooling_padding': 'valid',
+    #         'dropout': 0.,
+    #         'loss': 'mse',
+    #         'lr': 1e-3,
+    #         'dataset%': 1,
+    #         'normalization': 'minmax',
+    #         'img_normalize': 'off',
+    #         'loss_weights': [6],
+    #         'batch_size': 32,
+    #         'use_bias': False,
+    #         'batchnorm': False
+    #     },
+    #     'model_cfg': {
+    #         'VrfSPS': {
+    #             'cropping': [[14, 14]],
+    #             'conv_padding': ['same'],
+    #             'kernel_size': [[7, 7, 7], [5, 5, 5], [3, 3, 3],
+    #                             [11, 5, 3], [9, 7, 5],
+    #                             ],
+    #             'filters': [[4, 8, 16], [8, 16, 32], [4, 16, 64]],
+    #             'dense_layers': [[1024, 256, 128], [1024, 512, 256],
+    #                              [1024, 256], [512, 128], [512, 64]],
+    #         },
+    #     }
+    # },
 
     {
         'encoder': {
-            'epochs': 25,
+            'epochs': 50,
             'dense_layers': [1024, 512, 128],
             'filters': [8, 16, 32],
             'cropping': [0, 0],
@@ -78,22 +81,23 @@ configs = [
             'dropout': 0.,
             'loss': 'mse',
             'lr': 1e-3,
-            'dataset%': 0.75,
+            'dataset%': 1,
             'normalization': 'minmax',
             'img_normalize': 'off',
             'loss_weights': [6],
-            'batch_size': 32
+            'batch_size': 32,
+            'use_bias': False,
+            'batchnorm': False
         },
         'model_cfg': {
             'VrfSPS': {
-                'cropping': [[0, 0]],
-                'kernel_size': [[(13, 3), (9, 3), (5, 3)], 
-                                [9, 7, 5], [7, 5, 5], [13, 9, 7]
-                ],
-                'filters': [[8, 16, 32]],
-                'dense_layers': [[1024, 512, 256]],
-                'use_bias': [True, False],
-                'batchnorm': [True, False]
+                'cropping': [[14, 14]],
+                'conv_padding': ['same'],
+                'kernel_size': [[13, 9], [9, 9], [9, 5], [5, 5], [3, 3]
+                                ],
+                'filters': [[8, 16], [8, 32], [8, 64], [8, 8], [9, 12]],
+                'dense_layers': [
+                                 [1024, 256, 64, 16]],
             },
         }
     },

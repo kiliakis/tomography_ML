@@ -14,6 +14,7 @@ class EncoderSingle():
                  pooling_strides=[1, 1], pooling_padding='valid',
                  dropout=0.0, learning_rate=0.001, loss='mse',
                  metrics=['mae'], use_bias=True, batchnorm=False,
+                 conv_padding='valid',
                  **kwargs):
 
         self.output_name = output_name
@@ -39,7 +40,7 @@ class EncoderSingle():
             # Add the Convolution
             x = keras.layers.Conv2D(
                 filters=f, kernel_size=kernel_size[i], strides=strides[i],
-                use_bias=use_bias, 
+                use_bias=use_bias, padding=conv_padding, 
                 name=f'{output_name}_CNN_{i+1}')(x)
             
             # Apply batchnormalization

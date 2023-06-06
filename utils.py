@@ -240,6 +240,38 @@ def fast_tensor_load(path, percent=1.0, max_files=-1):
     return x_train, y_train
 
 
+def fast_tensor_load_encdec(path, percent=1.0, max_files=-1):
+    wf_arr, turn_arr, latent_arr, ps_arr = [], [], [], []
+    all_files = glob.glob(path)
+    if max_files > 0:
+        all_files = all_files[max_files]
+    # For every file that matches the regexp
+    for file in all_files:
+        print(f'Loading {file}')
+        # decompress and load file
+        with np.load(file) as data:
+            wf, turn, latent, ps = data['WFs'], data['turns'], data['latents'], data['PSs']
+        # Keep a smaller percentage if needed
+        if percent < 1 and percent > 0:
+            points = len(wf)
+            keep_points = np.random.choice(
+                points, int(points * percent), replace=False)
+            wf, turn, latent, ps = wf[keep_points], turn[keep_points], latent[keep_points], ps[keep_points]
+        # append to list
+        wf_arr.append(tf.convert_to_tensor(wf))
+        turn_arr.append(tf.convert_to_tensor(turn))
+        latent_arr.append(tf.convert_to_tensor(latent))
+        ps_arr.append(tf.convert_to_tensor(ps))
+
+    # make the final tensor
+    wf_arr = tf.concat(wf_arr, axis=0)
+    turn_arr = tf.concat(turn_arr, axis=0)
+    latent_arr = tf.concat(latent_arr, axis=0)
+    ps_arr = tf.concat(ps_arr, axis=0)
+
+    return wf_arr, turn_arr, latent_arr, ps_arr
+
+
 def load_encdec_data(pk_file, normalization, normalize=True, img_normalize='default',
                      ps_normalize='default'):
     turn_num, T_img, PS, fn, params_dict = read_pk(pk_file)
@@ -570,22 +602,29 @@ def assess_decoder(predictions, turn_normalized, PS_image,
         turn = int(minmax_normalize_param(turn_normalized[i], 0, 1, target_range=(1, 298)))
         # turn = int(unnormalizeTurn(turn_normalized[i]))
         f, ax = plt.subplots(2, 2)
+
         ax[0, 0].imshow(PS_image[i, :, :, 0], cmap='jet')
         ax[0, 0].set_title('PS @ {}'.format(turn))
         ax[0, 1].imshow(predictions[i, :, :, 0], cmap='jet')
         ax[0, 1].set_title('PREDICTION @ {}'.format(turn))
         ax[1, 0].plot(np.sum(PS_image[i, :, :, 0], 0), label='Target')
         ax[1, 0].plot(np.sum(predictions[i, :, :, 0], 0), label='Prediction')
-        ax[1, 0].legend()
+        ax[1, 0].legend(loc='upper left')
         ax[1, 0].set_title('Time Projection')
+        ax[1, 0].set_yticks([], [])
+        ax[1, 0].set_xticks([], [])
+
         ax[1, 1].plot(np.sum(PS_image[i, :, :, 0], 1), label='Target')
         ax[1, 1].plot(np.sum(predictions[i, :, :, 0], 1), label='Prediction')
-        ax[1, 1].legend()
+        ax[1, 1].legend(loc='upper left')
         ax[1, 1].set_title('Energy Projection')
+        ax[1, 1].set_yticks([], [])
+        ax[1, 1].set_xticks([], [])
+
         plt.tight_layout()
         if savefig:
             plt.savefig(os.path.join(
-                plots_dir, f'assess_decoder_turn{turn}.jpg'), dpi=400,
+                plots_dir, f'assess_decoder_turn{turn}.jpg'), dpi=100,
                 bbox_inches='tight')
         else:
             plt.show()
