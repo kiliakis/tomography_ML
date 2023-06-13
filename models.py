@@ -5,17 +5,18 @@ import numpy as np
 from utils import unnormalize_params, unnormalizeIMG
 import os
 
-class EncoderSingle():
+
+class EncoderSingle(keras.Model):
     # Pooling can be None, or 'Average' or 'Max'
-    def __init__(self, output_name, input_shape, dense_layers, filters,
-                 cropping=[[0, 0], [0, 0]], kernel_size=7, strides=[2, 2],
-                 activation='relu',
+    def __init__(self, output_name, input_shape=(128, 128, 1), dense_layers=[1024, 256, 64],
+                 filters=[8, 16, 32], cropping=[[0, 0], [0, 0]], kernel_size=3,
+                 strides=[2, 2], activation='relu',
                  pooling=None, pooling_size=[2, 2],
                  pooling_strides=[1, 1], pooling_padding='valid',
                  dropout=0.0, learning_rate=0.001, loss='mse',
-                 metrics=['mae'], use_bias=True, batchnorm=False,
-                 conv_padding='valid',
-                 **kwargs):
+                 metrics=[], use_bias=True, batchnorm=False,
+                 conv_padding='valid', **kwargs):
+        super().__init__()
 
         self.output_name = output_name
         self.inputShape = input_shape
@@ -40,13 +41,13 @@ class EncoderSingle():
             # Add the Convolution
             x = keras.layers.Conv2D(
                 filters=f, kernel_size=kernel_size[i], strides=strides[i],
-                use_bias=use_bias, padding=conv_padding, 
+                use_bias=use_bias, padding=conv_padding,
                 name=f'{output_name}_CNN_{i+1}')(x)
-            
+
             # Apply batchnormalization
             if batchnorm:
                 x = tf.keras.layers.BatchNormalization()(x)
-            
+
             # Apply the activation function
             x = keras.activations.get(activation)(x)
 
@@ -82,85 +83,241 @@ class EncoderSingle():
 
         self.model = model
 
-    @tf.function
-    def encode(self, waterfall):
+    def predict(self, waterfall):
         latent = self.model(waterfall)
         return latent
 
-    def load(self, weights_dir):
-        self.model = keras.models.load_model(
-            os.path.join(weights_dir, f'encoder_{self.output_name}.h5')
-        )
+    def load(self, weights_file):
+        self.model = keras.models.load_model(weights_file)
+
+    def save(self, weights_file):
+        self.model.save(weights_file)
 
 
-class EncoderMulti():
+class EncoderMulti:
     var_names = ['phEr', 'enEr', 'bl',
                  'inten', 'Vrf', 'mu',
                  'VrfSPS']
 
-    def __init__(self, enc_weights_dir=None, enc_list=None, loss_weights=None):
-        self.loss_weights = loss_weights
-        if self.loss_weights is None:
-            self.loss_weights = np.arange(len(self.var_names))
-        # else:
-        #     self.var_names = [self.var_names[i] for i in loss_weights]
-        if enc_weights_dir:
-            if 'encoder.h5' in os.listdir(enc_weights_dir):
-                self.model = keras.models.load_model(
-                    os.path.join(enc_weights_dir, 'encoder.h5'))
-            else:
-                # or in multiple files, one per latent space variable
-                models = []
-                for var in self.var_names:
-                    fname = f'encoder_{var}.h5'
-                    if fname in os.listdir(enc_weights_dir):
-                        models.append(keras.models.load_model(
-                            os.path.join(enc_weights_dir, fname)))
-                    else:
-                        print(f'Error, {fname} not found in {enc_weights_dir}')
-                        exit(-1)
-                self.model = models
-        elif enc_list:
+    # By default, the model does not predict the intensity variable
+    def __init__(self, enc_list=[]):
+        # If a list of models is provided, use it. Otherwise, default initialize models.
+        if len(enc_list) > 0:
             self.model = enc_list
-
-    def encode(self, waterfall, unnormalize=False, normalization='minmax'):
-        if isinstance(self.model, list):
-            latent = tf.concat([m(waterfall)
-                               for m in self.model], axis=1)
         else:
-            latent = self.model(waterfall)
+            self.model = [
+                EncoderSingle(output_name='phEr', kernel_size=[3, 3],
+                              filters=[4, 8]),
+                EncoderSingle(output_name='enEr', cropping=[6, 6]),
+                EncoderSingle(output_name='bl', cropping=[12, 12],
+                              kernel_size=[(13, 3), (7, 3), (3, 3)]),
+                EncoderSingle(output_name='inten'),
+                EncoderSingle(output_name='Vrf', cropping=[6, 6],
+                              kernel_size=[13, 7, 3]),
+                EncoderSingle(output_name='mu', kernel_size=[5, 5, 5]),
+                EncoderSingle(output_name='VrfSPS', cropping=[6, 6],
+                              kernel_size=[5, 5, 5]),
+            ]
+
+    def load(self, weights_dir):
+
+        weights_dir_files = os.listdir(weights_dir)
+        for model in self.model:
+            # For every model load parameters from weights dir
+            var = model.output_name
+            fname = f'encoder_{var}.h5'
+            if fname in weights_dir_files:
+                model.load(os.path.join(weights_dir, fname))
+            else:
+                raise FileNotFoundError(
+                    f'File {fname} not found in {weights_dir}')
+
+    def save(self, model_path):
+        # Save all individual models
+        for model in self.model:
+            var = model.output_name
+            file_path = os.path.join(model_path, f'encoder_{var}.h5')
+            model.save(file_path)
+
+    def predict(self, waterfall, unnormalize=False, normalization='minmax'):
+        # collect the latents
+        latent = tf.concat([m.predict(waterfall)
+                            for m in self.model], axis=1)
+        # optionally normallize them
         if unnormalize:
             latent = unnormalize_params(
                 latent[:, 0], latent[:, 1], latent[:, 2],
                 latent[:, 3], latent[:, 4], latent[:, 5],
                 latent[:, 6], normalization=normalization)
             latent = np.array(latent).T
-        if len(self.loss_weights) < latent.shape[1]:
-            # it means that not all latents are needed
-            # keep only those in loss_weights
-            latent = tf.concat([tf.expand_dims(tf.gather(latent, i, axis=1), axis=1)
-                        for i in self.loss_weights], -1)
 
         return latent
 
+    def summary(self):
+        for model in self.model:
+            model.model.summary()
+            print()
+
+
+class Decoder(keras.Model):
+    def __init__(self, output_shape=(128, 128, 1), dense_layers=[8, 64, 1024],
+                 filters=[32, 16, 8, 1],
+                 kernel_size=3, strides=[2, 2],
+                 activation='relu', final_kernel_size=3,
+                 final_activation='linear',
+                 dropout=0.0, learning_rate=0.001, loss='mse',
+                 **kwargs):
+        super().__init__()
+        assert filters[-1] == 1
+        # assert dense_layers[0] == 8
+
+        # I calculate the dimension if I was moving:
+        # output_shape --> filter[-1] --> filter[-2] .. filter[0]
+
+        # Generate the inverse model (encoder) to find the t_shape
+        temp = keras.Sequential()
+        temp.add(keras.Input(shape=output_shape))
+        temp.add(keras.layers.Conv2D(filters=filters[-1], padding='same',
+                                     strides=1, kernel_size=final_kernel_size))
+
+        for filter in (filters[::-1])[1:]:
+            temp.add(keras.layers.Conv2D(filters=filter, padding='same',
+                                         strides=strides, kernel_size=kernel_size))
+
+        t_shape = temp.layers[-1].output_shape[1:]
+        # print(temp.summary())
+        del temp
+        # t_shape = (t_shape[0]+1, t_shape[1]+1, int(t_shape[2]/2))
+
+        # Initialize the model
+        self.model = keras.Sequential()
+        # set the input size
+        self.model.add(keras.Input(shape=dense_layers[0], name='Input'))
+
+        # For each optional dense layer
+        for i, layer in enumerate(dense_layers[1:]):
+            # Add the layer
+            self.model.add(keras.layers.Dense(layer, activation=activation,
+                                              name=f'Dense_{i+1}'))
+            # Add dropout optionally
+            if dropout > 0 and dropout < 1:
+                self.model.add(keras.layers.Dropout(
+                    dropout, name=f'Dropout_{i+1}'))
+
+        # extend to needed t_shape and reshape
+        self.model.add(keras.layers.Dense(
+            units=np.prod(t_shape), activation='relu', name='Expand'))
+        self.model.add(keras.layers.Reshape(
+            target_shape=t_shape, name='Reshape'))
+
+        # For evey Convolutional layer
+        for i, f in enumerate(filters[:-1]):
+            # Add the Convolution
+            self.model.add(keras.layers.Conv2DTranspose(
+                filters=f, kernel_size=kernel_size, strides=strides,
+                activation=activation, name=f'CNN_{i+1}', padding='same'))
+
+        # Final output convolution
+        self.model.add(keras.layers.Conv2DTranspose(
+            filters=filters[-1], kernel_size=final_kernel_size,
+            strides=1, padding='same', name=f'CNN_final'))
+
+        self.model.add(keras.layers.Activation(
+            activation=final_activation, name='final_activation'))
+
+        assert self.model.layers[-1].output_shape[1:] == output_shape
+        # Also initialize the optimizer and compile the model
+        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+        self.model.compile(optimizer=optimizer, loss=loss)
+
     def load(self, weights_dir):
-        if 'encoder.h5' in os.listdir(weights_dir):
+        # The encoder weights are in a single file called decoder.h5
+        if 'decoder.h5' in os.listdir(weights_dir):
             self.model = keras.models.load_model(
-                os.path.join(weights_dir, 'encoder.h5'))
+                os.path.join(weights_dir, 'decoder.h5'),
+                compile=False)
+            optimizer = keras.optimizers.Adam(learning_rate=1e-3)
+            self.model.compile(optimizer=optimizer, loss='mse')
         else:
-            # or in multiple files, one per latent space variable
-            models = []
-            for var in self.var_names:
-                fname = f'encoder_{var}.h5'
-                if fname in os.listdir(weights_dir):
-                    models.append(keras.models.load_model(
-                        os.path.join(weights_dir, fname)))
-                else:
-                    print(f'Error, {fname} not found in {weights_dir}')
-                    exit(-1)
-            self.model = models
+            raise FileNotFoundError(
+                f'File decoder.h5 not found in {weights_dir}')
+
+    def predict(self, latent, turn, unnormalize=False):
+        turn = tf.reshape(turn, [-1, 1])
+        extended = tf.concat([turn, latent], axis=1)
+        # check input size and drop dimension if needed
+        PS = self.model.predict(extended)
+        if unnormalize:
+            PS = unnormalizeIMG(PS)
+        return PS
+
+    def save(self, model_path):
+        file_path = os.path.join(model_path, 'decoder.h5')
+        self.model.save(file_path)
+
+    def summary(self):
+        self.model.summary()
 
 
+class EncoderDecoderModel:
+
+    def __init__(self):
+        # Simply initialize two empty models
+        self.encoder = EncoderMulti()
+        self.decoder = Decoder()
+
+    def load(self, weights_dir='', enc_weights_dir='', dec_weights_dir=''):
+        # Load encoder parameters
+        if not enc_weights_dir:
+            assert weights_dir
+            enc_weights_dir = os.path.join(weights_dir, 'encoder')
+        if not os.path.isdir(enc_weights_dir):
+            raise FileNotFoundError(f'Directory not found: {enc_weights_dir}')
+        self.encoder.load(enc_weights_dir)
+
+        # Load decoder parameters
+        if not dec_weights_dir:
+            assert weights_dir
+            dec_weights_dir = os.path.join(weights_dir, 'decoder')
+        if not os.path.isdir(dec_weights_dir):
+            raise FileNotFoundError(f'Directory not found: {dec_weights_dir}')
+        self.decoder.load(dec_weights_dir)
+
+    def encode(self, WF, unnormalize=False, normalization='minmax'):
+        return self.encoder.predict(WF, unnormalize, normalization)
+
+    def decode(self, latent, turn, unnormalize=False):
+        return self.decoder.predict(latent, turn, unnormalize)
+
+    def predict(self, WF, turn, unnormalize=False, normalization='minmax'):
+        latent = self.encode(WF)
+        PS = self.decode(latent, turn)
+        if unnormalize:
+            latent = unnormalize_params(
+                latent[:, 0], latent[:, 1], latent[:, 2],
+                latent[:, 3], latent[:, 4], latent[:, 5],
+                latent[:, 6], normalization=normalization)
+            latent = np.array(latent).T
+            PS = unnormalizeIMG(PS)
+        return latent, PS
+
+    def save(self, model_path):
+        # First save the encoder
+        enc_target_dir = os.path.join(model_path, 'encoder')
+        os.makedirs(enc_target_dir, exist_ok=True)
+        self.encoder.save(enc_target_dir)
+
+        # Then save the decoder
+        dec_target_dir = os.path.join(model_path, 'decoder')
+        os.makedirs(dec_target_dir, exist_ok=True)
+        self.decoder.save(dec_target_dir)
+
+    def summary(self):
+        self.encoder.summary()
+        self.decoder.summary()
+
+
+'''
 class Encoder(keras.Model):
     # Pooling can be None, or 'Average' or 'Max'
     def __init__(self, input_shape, dense_layers, filters,
@@ -229,150 +386,6 @@ class Encoder(keras.Model):
         return self.model(waterfall)
 
 
-def customActivation1(x):
-    return K.maximum(K.minimum(x, 1), -1)
-
-
-class Decoder(keras.Model):
-    def __init__(self, output_shape=(128, 128, 1), dense_layers=[8, 64, 1024],
-                 filters=[32, 16, 8, 1],
-                 kernel_size=3, strides=[2, 2],
-                 activation='relu', final_kernel_size=3,
-                 final_activation='linear',
-                 dropout=0.0, learning_rate=0.001, loss='mse',
-                 **kwargs):
-        super(Decoder, self).__init__()
-        assert filters[-1] == 1
-        # assert dense_layers[0] == 8
-
-        # I calculate the dimension if I was moving:
-        # output_shape --> filter[-1] --> filter[-2] .. filter[0]
-
-        # Generate the inverse model (encoder) to find the t_shape
-        temp = keras.Sequential()
-        temp.add(keras.Input(shape=output_shape))
-        temp.add(keras.layers.Conv2D(filters=filters[-1], padding='same',
-                                     strides=1, kernel_size=final_kernel_size))
-
-        for filter in (filters[::-1])[1:]:
-            temp.add(keras.layers.Conv2D(filters=filter, padding='same',
-                                         strides=strides, kernel_size=kernel_size))
-
-        t_shape = temp.layers[-1].output_shape[1:]
-        # print(temp.summary())
-        del temp
-        # t_shape = (t_shape[0]+1, t_shape[1]+1, int(t_shape[2]/2))
-
-        # Initialize the model
-        self.model = keras.Sequential()
-        # set the input size
-        self.model.add(keras.Input(shape=dense_layers[0], name='Input'))
-
-        # For each optional dense layer
-        for i, layer in enumerate(dense_layers[1:]):
-            # Add the layer
-            self.model.add(keras.layers.Dense(layer, activation=activation,
-                                              name=f'Dense_{i+1}'))
-            # Add dropout optionally
-            if dropout > 0 and dropout < 1:
-                self.model.add(keras.layers.Dropout(
-                    dropout, name=f'Dropout_{i+1}'))
-
-        # extend to needed t_shape and reshape
-        self.model.add(keras.layers.Dense(
-            units=np.prod(t_shape), activation='relu', name='Expand'))
-        self.model.add(keras.layers.Reshape(
-            target_shape=t_shape, name='Reshape'))
-
-        # For evey Convolutional layer
-        for i, f in enumerate(filters[:-1]):
-            # Add the Convolution
-            self.model.add(keras.layers.Conv2DTranspose(
-                filters=f, kernel_size=kernel_size, strides=strides,
-                activation=activation, name=f'CNN_{i+1}', padding='same'))
-
-        # Final output convolution
-        self.model.add(keras.layers.Conv2DTranspose(
-            filters=filters[-1], kernel_size=final_kernel_size,
-            strides=1, padding='same', name=f'CNN_final'))
-
-        if final_activation == 'custom1':
-            self.model.add(keras.layers.Lambda(
-                customActivation1, name='final_activation'))
-        else:
-            self.model.add(keras.layers.Activation(
-                activation=final_activation, name='final_activation'))
-
-        assert self.model.layers[-1].output_shape[1:] == output_shape
-        # Also initialize the optimizer and compile the model
-        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
-        self.model.compile(optimizer=optimizer, loss=loss)
-
-    @tf.function
-    def decode(self, latent, turn, unnormalize=False):
-        # if the number of latents is equal to the input shape
-        # it means the intensity latent has to be removed
-        # intenstity is latent 3 (starting from 0)
-        # if latent.shape[1] == self.model.layers[0].input_shape[1]:
-        #     latent = tf.concat([tf.expand_dims(tf.gather(latent, i, axis=1), axis=1)
-        #                         for i in loss_weights], -1)
-        turn = tf.reshape(turn, [-1, 1])
-        extended = tf.concat([turn, latent], axis=1)
-        # check input size and drop dimension if needed
-        PS = self.model(extended)
-        if unnormalize:
-            PS = unnormalizeIMG(PS)
-        return PS
-
-    def load(self, weights_dir):
-        # The encoder weights are in a single file called decoder.h5
-        if 'decoder.h5' in os.listdir(weights_dir):
-            self.model = keras.models.load_model(
-                os.path.join(weights_dir, 'decoder.h5'),
-                compile=False)
-            optimizer = keras.optimizers.Adam(learning_rate=1e-3)
-            self.model.compile(optimizer=optimizer, loss='mse')
-        else:
-            print(f'Error, decoder.h5 not found in {weights_dir}')
-            exit(-1)
-
-
-class encoderDecoderModel():
-    def __init__(self, enc_weights_dir, dec_weights_dir, loss_weights=None):
-        self.encoder = EncoderMulti(enc_weights_dir, loss_weights=loss_weights)
-
-        if 'decoder.h5' in os.listdir(dec_weights_dir):
-            self.decoder = Decoder()
-            self.decoder.load(dec_weights_dir)
-            # self.decoder = keras.models.load_model(
-            #     os.path.join(dec_weights_dir, 'decoder.h5'),
-            #     compile=False)
-            # optimizer = keras.optimizers.Adam(learning_rate=1e-3)
-            # self.decoder.compile(optimizer=optimizer, loss='mse')
-        else:
-            print(f'Error, decoder.h5 not found in {dec_weights_dir}')
-            exit(-1)
-
-    def encode(self, WF, unnormalize=False, normalization='minmax'):
-        return self.encoder.encode(WF, unnormalize, normalization)
-
-    def decode(self, latent, turn, unnormalize=False):
-        return self.decoder.decode(latent, turn, unnormalize)
-
-    def predictPS(self, WF, turn, unnormalize=False, normalization='minmax'):
-        latent = self.encode(WF)
-        PS = self.decode(latent, turn)
-        if unnormalize:
-            latent = unnormalize_params(
-                latent[:, 0], latent[:, 1], latent[:, 2],
-                latent[:, 3], latent[:, 4], latent[:, 5],
-                latent[:, 6], normalization=normalization)
-            latent = np.array(latent).T
-            PS = unnormalizeIMG(PS)
-        return latent, PS
-
-
-'''
 class extendedCED(keras.Model):
 
     def __init__(self, latent_dim, additional_latent_dim, input_shape, filters,

@@ -9,6 +9,7 @@ import glob
 from scipy import signal
 from scipy.interpolate import interp1d
 
+
 def get_best_model_timestamp(path, model='enc'):
     from sort_trial_summaries import extract_trials
     header, rows = extract_trials(path)
@@ -111,7 +112,7 @@ def bunchProfile_TFconvolve(frames, timeScale, freq_array, TF_array):
     TF = np.interp(freq, np.fft.fftshift(freq_array), np.fft.fftshift(TF_array.real)) + \
         1j * np.interp(freq, np.fft.fftshift(freq_array),
                        np.fft.fftshift(TF_array.imag))
-    
+
     for i in range(Nframes):
         profile = frames[:, i]
         profile = profile - profile[0:10].mean()
@@ -188,9 +189,9 @@ def read_pk(fname):
     data = pk.loads(tf.io.decode_raw(tf.io.read_file(fname), tf.uint8))
     return data['turn'], data['T_img'], data['PS'], data['fn'], data['params']
 
-# Returns a random sample of percent filenames from input path
 
 def sample_files(path, percent, keep_every=1):
+    # Returns a random sample of percent filenames from input path
     ret_files = []
     dirs = glob.glob(path + '/*x10K')
     seen_set = set()
@@ -283,9 +284,9 @@ def load_encdec_data(pk_file, normalization, normalize=True, img_normalize='defa
         pass
     # turn_num = normalizeTurn(turn_num)
     turn_num = minmax_normalize_param(turn_num, 1, 298, target_range=(0, 1))
-    if img_normalize=='default':
+    if img_normalize == 'default':
         T_img = normalizeIMG(T_img)
-    elif img_normalize=='minmax':
+    elif img_normalize == 'minmax':
         T_img = minMaxScaleIMG(T_img)
     elif img_normalize == 'off':
         pass
@@ -310,11 +311,11 @@ def load_encoder_data(pk_file, normalization, normalize=True, img_normalize='def
     T_img = np.reshape(T_img, T_img.shape+(1,))
     # PS = np.reshape(PS, PS.shape+(1,))
     # turn_num = normalizeTurn(turn_num)
-    if img_normalize=='default':
+    if img_normalize == 'default':
         T_img = normalizeIMG(T_img)
-    elif img_normalize=='minmax':
+    elif img_normalize == 'minmax':
         T_img = minMaxScaleIMG(T_img)
-    elif img_normalize=='off':
+    elif img_normalize == 'off':
         pass
 
     # PS = normalizeIMG(PS)
@@ -381,7 +382,7 @@ def load_decoder_data(pk_file, normalization, ps_normalize='default'):
 #     return turn_num, T_img, PS, fn, phEr, enEr, bl, inten, Vrf, mu, VrfSPS, T_normFactor, B_normFactor
 
 
-def encdec_files_to_tensors(files, normalize=True, normalization='default', 
+def encdec_files_to_tensors(files, normalize=True, normalization='default',
                             img_normalize='default', ps_normalize='default'):
     waterfall_arr = np.zeros((len(files), 128, 128, 1), dtype=np.float32)
     turn_arr = np.zeros(len(files), dtype=np.float32)
@@ -391,10 +392,10 @@ def encdec_files_to_tensors(files, normalize=True, normalization='default',
     for file in files:
         try:
             waterfall, turn, latents, ps = load_encdec_data(file,
-                                                        normalize=normalize,
-                                                        normalization=normalization,
-                                                        img_normalize=img_normalize,
-                                                        ps_normalize=ps_normalize)
+                                                            normalize=normalize,
+                                                            normalization=normalization,
+                                                            img_normalize=img_normalize,
+                                                            ps_normalize=ps_normalize)
         except Exception as e:
             print(f'Skipping file {file}, ', e)
             continue
@@ -402,7 +403,7 @@ def encdec_files_to_tensors(files, normalize=True, normalization='default',
         turn_arr[i] = turn
         latent_arr[i] = latents
         phasespace_arr[i] = ps
-        i+=1
+        i += 1
     waterfall_arr = tf.convert_to_tensor(waterfall_arr[:i])
     turn_arr = tf.convert_to_tensor(turn_arr[:i])
     latent_arr = tf.convert_to_tensor(latent_arr[:i])
@@ -418,14 +419,14 @@ def encoder_files_to_tensors(files, normalize=True, normalization='default', img
     for file in files:
         try:
             features, output = load_encoder_data(file, normalize=normalize,
-                                             normalization=normalization,
-                                             img_normalize=img_normalize)
+                                                 normalization=normalization,
+                                                 img_normalize=img_normalize)
         except Exception as e:
             print(f'Skipping file {file}, ', e)
             continue
         feature_arr[i] = features
         output_arr[i] = output
-        i+=1
+        i += 1
     x_train = tf.convert_to_tensor(feature_arr[:i])
     y_train = tf.convert_to_tensor(output_arr[:i])
     return x_train, y_train
@@ -444,7 +445,7 @@ def decoder_files_to_tensors(files, normalization='default', ps_normalize='defau
             continue
         feature_arr[i] = features
         output_arr[i] = output
-        i+=1
+        i += 1
     x_train = tf.convert_to_tensor(feature_arr[:i])
     y_train = tf.convert_to_tensor(output_arr[:i])
     return x_train, y_train
@@ -496,7 +497,7 @@ def normalize_params(*args, normalization):
             norm_func(args[4], Vrf_a, Vrf_b),\
             norm_func(args[5], mu_a, mu_b),\
             norm_func(args[6], VrfSPS_a, VrfSPS_b)
-        
+
 
 def unnormalize_params(*args, normalization):
     if normalization == 'std':
@@ -545,10 +546,12 @@ def unnormalize_params(*args, normalization):
             unnorm_func(args[5], mu_a, mu_b),\
             unnorm_func(args[6], VrfSPS_a, VrfSPS_b)
 
+
 def assess_model(predictions, turn_normalized, T_image, PS_image,
                  plots_dir='./plots', savefig=False, with_projections=True):
     for i in range(predictions.shape[0]):
-        turn = int(minmax_normalize_param(turn_normalized[i], 0, 1, target_range=(1, 298)))
+        turn = int(minmax_normalize_param(
+            turn_normalized[i], 0, 1, target_range=(1, 298)))
         # turn = int(unnormalizeTurn(turn_normalized[i]))
         if with_projections:
             f, ax = plt.subplots(2, 3)
@@ -599,7 +602,8 @@ def assess_decoder(predictions, turn_normalized, PS_image,
                    plots_dir='./plots', savefig=False):
 
     for i in range(predictions.shape[0]):
-        turn = int(minmax_normalize_param(turn_normalized[i], 0, 1, target_range=(1, 298)))
+        turn = int(minmax_normalize_param(
+            turn_normalized[i], 0, 1, target_range=(1, 298)))
         # turn = int(unnormalizeTurn(turn_normalized[i]))
         f, ax = plt.subplots(2, 2)
 
@@ -639,17 +643,21 @@ def correctTriggerOffsets(x, frames, triggerOffsets):
         x_temp = x + triggerOffsets[i]
         frame = frames[:, i]
         extrap_value = np.mean(frame[0:10])
-        frame_interp = interp1d(x_temp, frame, bounds_error=False, fill_value=extrap_value)
+        frame_interp = interp1d(
+            x_temp, frame, bounds_error=False, fill_value=extrap_value)
         frames_new[:, i] = frame_interp(x)
 
     return frames_new
-       
+
+
 def getTriggerOffset(BunchProfiles, filter_n=12):
     # import matplotlib.pyplot as plt
     dataPoints = np.shape(BunchProfiles)[0]
-    mass_centre = (BunchProfiles.T @ np.arange(dataPoints)) / np.sum(BunchProfiles, axis=0)
+    mass_centre = (BunchProfiles.T @ np.arange(dataPoints)) / \
+        np.sum(BunchProfiles, axis=0)
     filtered = signal.filtfilt(np.ones(filter_n) / filter_n, 1, mass_centre)
     return mass_centre - filtered
+
 
 def correctForTriggerOffset(timeScale, singleBunchFrame, filter_n=12,  iterations=1):
     # import matplotlib.pyplot as plt
@@ -657,9 +665,11 @@ def correctForTriggerOffset(timeScale, singleBunchFrame, filter_n=12,  iteration
     singleBunchFrame_iter = singleBunchFrame
     try:
         for i in np.arange(iterations):
-            trigger_offsets = getTriggerOffset(singleBunchFrame_iter, filter_n=filter_n)
+            trigger_offsets = getTriggerOffset(
+                singleBunchFrame_iter, filter_n=filter_n)
             trigger_offsets *= dt
-            singleBunchFrame_iter = correctTriggerOffsets(timeScale, singleBunchFrame_iter, -trigger_offsets)
+            singleBunchFrame_iter = correctTriggerOffsets(
+                timeScale, singleBunchFrame_iter, -trigger_offsets)
         singleBunchFrame_new = singleBunchFrame_iter
     except Exception as e:
         print(e)
@@ -669,7 +679,7 @@ def correctForTriggerOffset(timeScale, singleBunchFrame, filter_n=12,  iteration
     # dataPoints = np.shape(singleBunchFrame_new)[0]
     # mass_centre = (singleBunchFrame_new.T @ np.arange(dataPoints)) / np.sum(singleBunchFrame_new, axis=0)
 
-    return  singleBunchFrame_new
+    return singleBunchFrame_new
 
 
 def getTimeProfiles_FromData_new(fname, Ib):
@@ -677,18 +687,18 @@ def getTimeProfiles_FromData_new(fname, Ib):
         timeScale_for_tomo = np.load(f)
         BunchProfiles = np.load(f)
     # divide the profiles by the integral, multiply by intensity
-    BunchProfiles = BunchProfiles / np.sum(BunchProfiles, axis=0) * Ib
+    BunchProfiles = BunchProfiles / np.sum(BunchProfiles[:, 0], axis=0) * Ib
     return timeScale_for_tomo, BunchProfiles
 
 
-def getTimgForModelFromDataFile_new(fname, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=128, 
-                                    zeropad=14, start_turn=1, skipturns=3, 
+def getTimgForModelFromDataFile_new(fname, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=128,
+                                    zeropad=14, start_turn=1, skipturns=3,
                                     centroid_offset=0, corrTriggerOffset=False,
                                     filter_n=12, iterations=1):
     timeScale_for_tomo, BunchProfiles = getTimeProfiles_FromData_new(fname, Ib)
     # print(timeScale_for_tomo)
     # Apply correction
-    if corrTriggerOffset==True:
+    if corrTriggerOffset == True:
         # print(BunchProfiles.shape)
         BunchProfiles = correctForTriggerOffset(timeScale_for_tomo, BunchProfiles,
                                                 filter_n=filter_n, iterations=iterations)
@@ -704,11 +714,12 @@ def getTimgForModelFromDataFile_new(fname, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_
     # T_img_ForModel = minMaxScaleIMG(np.reshape(T_img, T_img.shape+(1,)))
 
     BunchProfiles = np.pad(BunchProfiles[:, start_turn:sel_turns[-1]+1], ((zeropad-centroid_offset, zeropad +
-                                                  centroid_offset), (zeropad, zeropad)), 'constant', constant_values=(0, 0))
+                                                                           centroid_offset), (zeropad, zeropad)), 'constant', constant_values=(0, 0))
     BunchProfiles = np.reshape(BunchProfiles, BunchProfiles.shape+(1,))
     # BunchProfiles = minMaxScaleIMG(np.reshape(BunchProfiles, BunchProfiles.shape+(1,)))
 
     return T_img_ForModel, BunchProfiles
+
 
 def real_files_to_tensors(data_dir, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=128,
                           zeropad=14, start_turn=1, skipturns=3, centroid_offset=0,
@@ -727,18 +738,19 @@ def real_files_to_tensors(data_dir, Ib=1.0, T_normFactor=1.0, IMG_OUTPUT_SIZE=12
                                                                         Ib=Ib,
                                                                         T_normFactor=T_normFactor,
                                                                         corrTriggerOffset=corrTriggerOffset,
-                                                                        filter_n=filter_n, 
+                                                                        filter_n=filter_n,
                                                                         iterations=iterations)
         except Exception as e:
             print(f'Skipping file {fname}, ', e)
             continue
         waterfall_arr[i] = waterfall
         bunch_profiles_arr[i] = bunch_profiles
-        i+=1
+        i += 1
         file_list.append(file.split('.npy')[0])
-        
+
     return waterfall_arr[:i], file_list, bunch_profiles_arr[:i]
-    
+
+
 def fwhm(x, y, level=0.5):
     offset_level = np.mean(y[0:10])
     amp = np.max(y) - offset_level
@@ -811,19 +823,26 @@ def window_mean(x, W, axis=0, zeropad=14):
     moving_average = np.copy(x)
     if axis == 0:
         for i in np.arange(np.shape(moving_average)[0]):
-            moving_average[i, :zeropad] = moving_average[i, zeropad] * np.ones(zeropad) 
-            moving_average[i, -zeropad:] = moving_average[i, -zeropad-1] * np.ones(zeropad)
-            moving_average[i,:] = np.convolve(moving_average[i], np.ones((W,))/W, mode='same')
+            moving_average[i, :zeropad] = moving_average[i,
+                                                         zeropad] * np.ones(zeropad)
+            moving_average[i, -zeropad:] = moving_average[i, -
+                                                          zeropad-1] * np.ones(zeropad)
+            moving_average[i, :] = np.convolve(
+                moving_average[i], np.ones((W,))/W, mode='same')
         moving_average[:, :zeropad] = x[:, :zeropad]
         moving_average[:, -zeropad:] = x[:, -zeropad:]
     elif axis == 1:
         for i in np.arange(np.shape(moving_average)[1]):
-            moving_average[:zeropad, i] = moving_average[zeropad, i] * np.ones(zeropad) 
-            moving_average[-zeropad:, i] = moving_average[-zeropad-1, i] * np.ones(zeropad)
-            moving_average[:, i] = np.convolve(moving_average[:, i], np.ones((W,))/W, mode='same')
+            moving_average[:zeropad,
+                           i] = moving_average[zeropad, i] * np.ones(zeropad)
+            moving_average[-zeropad:,
+                           i] = moving_average[-zeropad-1, i] * np.ones(zeropad)
+            moving_average[:, i] = np.convolve(
+                moving_average[:, i], np.ones((W,))/W, mode='same')
         moving_average[:zeropad, :] = x[:zeropad, :]
         moving_average[-zeropad:, :] = x[-zeropad:, :]
     return moving_average
+
 
 def conv2D_output_size(input_size, out_channels, padding, kernel_size, stride,
                        dilation=None):
