@@ -3,8 +3,8 @@ import pickle as pk
 import time
 import tensorflow as tf
 import numpy as np
-from utils import sample_files, encoder_files_to_tensors
-from utils import decoder_files_to_tensors, encdec_files_to_tensors
+from local_utils import sample_files, encoder_files_to_tensors
+from local_utils import decoder_files_to_tensors, encdec_files_to_tensors
 
 
 # data_dir = './tomo_data/datasets_encoder_TF_24-03-23'

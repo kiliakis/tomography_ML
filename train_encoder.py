@@ -1,10 +1,6 @@
 # Train the ML model
 
-from models import Encoder
-from utils import sample_files
-from utils import plot_loss, encoder_files_to_tensors, load_encoder_data
 import time
-import glob
 import tensorflow as tf
 from tensorflow import keras
 import yaml
@@ -13,8 +9,12 @@ import shutil
 import numpy as np
 from datetime import datetime
 import argparse
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+
+from local_utils import plot_loss
+from mlp_lhc_tomography.utils import sample_files, encoder_files_to_tensors, load_encoder_data
+from mlp_lhc_tomography.models import EncoderSingle
+
 mpl.use('Agg')
 
 parser = argparse.ArgumentParser(description='Train the encoder/ decoder models',
@@ -188,7 +188,7 @@ if __name__ == '__main__':
         # Model instantiation
         input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
 
-        encoder = Encoder(input_shape=input_shape, **train_cfg)
+        encoder = EncoderSingle(input_shape=input_shape, **train_cfg)
 
         print(encoder.model.summary())
         end_t = time.time()

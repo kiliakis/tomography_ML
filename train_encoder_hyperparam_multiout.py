@@ -1,7 +1,7 @@
 # Train the ML model
 import matplotlib.pyplot as plt
-from utils import sample_files, plot_loss, load_encoder_data
-from utils import encoder_files_to_tensors, fast_tensor_load
+from local_utils import sample_files, plot_loss, load_encoder_data
+from local_utils import encoder_files_to_tensors, fast_tensor_load
 from models import EncoderSingle
 from itertools import product
 import pickle

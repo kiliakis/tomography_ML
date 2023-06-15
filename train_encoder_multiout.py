@@ -10,13 +10,13 @@ import shutil
 import numpy as np
 from datetime import datetime
 import argparse
-# import matplotlib.pyplot as plt
 import matplotlib as mpl
 mpl.use('Agg')
 
-from models import EncoderSingle
-from utils import sample_files, plot_loss, load_encoder_data
-from utils import encoder_files_to_tensors, fast_tensor_load
+from mlp_lhc_tomography.models import EncoderSingle
+from mlp_lhc_tomography.utils import sample_files, load_encoder_data
+from mlp_lhc_tomography.utils import encoder_files_to_tensors, fast_tensor_load
+from local_utils import plot_loss
 
 parser = argparse.ArgumentParser(description='Train the encoder/ decoder models',
                                  usage='python train_model.py -c config.yml')
@@ -335,7 +335,7 @@ if __name__ == '__main__':
             cfg.update(model_cfg.get(var_name, {}))
             model_cfg[var_name] = cfg
             
-            model = EncoderSingle(input_shape=input_shape, output_name=var_name, **cfg)
+            model = EncoderSingle(output_name=var_name, input_shape=input_shape, **cfg)
             print(model.model.summary())
 
             if 'TENSOR' in DATA_LOAD_METHOD:

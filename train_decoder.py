@@ -1,8 +1,9 @@
 # Train the ML model
 
-from models import Decoder
-from utils import sample_files, fast_tensor_load
-from utils import plot_loss, decoder_files_to_tensors, load_decoder_data
+from mlp_lhc_tomography.models import Decoder
+from mlp_lhc_tomography.utils import sample_files, fast_tensor_load
+from mlp_lhc_tomography.utils import decoder_files_to_tensors, load_decoder_data
+from local_utils import plot_loss
 import time
 import glob
 import shutil
@@ -208,9 +209,9 @@ if __name__ == '__main__':
 
         start_t = time.time()
         # Model instantiation
-        input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
+        output_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
 
-        decoder = Decoder(input_shape, **train_cfg)
+        decoder = Decoder(output_shape, **train_cfg)
 
         print(decoder.model.summary())
         end_t = time.time()

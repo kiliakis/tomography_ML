@@ -3,10 +3,10 @@ import os
 import numpy as np
 import pickle as pk
 import random
-from utils import extract_data_Fromfolder
-from sklearn.model_selection import train_test_split
-from utils import loadTF, calc_bin_centers
 import argparse
+from sklearn.model_selection import train_test_split
+from mlp_lhc_tomography.utils import extract_data_Fromfolder
+from mlp_lhc_tomography.utils import loadTF, calc_bin_centers
 
 IMG_OUTPUT_SIZE = 128
 zeropad = 14
