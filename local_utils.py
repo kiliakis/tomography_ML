@@ -50,7 +50,7 @@ def tomoscope_files_to_tensors(files, normalize=True, normalization='default',
         except Exception as e:
             print(f'Skipping file {file}, ', e)
             continue
-        if not keep_idx:
+        if len(keep_idx) == 0:
             assert len(turn) >= num_turns
             keep_idx = np.arange(0, len(turn), len(turn) // num_turns)
         assert len(keep_idx) == num_turns
