@@ -150,7 +150,7 @@ if __name__ == '__main__':
             assert train_cfg['img_normalize'] == 'off'
 
             TRAINING_PATH = os.path.join(ML_dir, 'tomoscope-training-??.npz')
-            VALIDATION_PATH = os.path.join(ML_dir, 'tomoscpe-validation-??.npz')
+            VALIDATION_PATH = os.path.join(ML_dir, 'tomoscope-validation-??.npz')
 
             x_train, turn_train, latent_train, y_train = fast_tensor_load_encdec(
                 TRAINING_PATH, train_cfg['dataset%'])
