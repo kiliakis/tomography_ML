@@ -119,15 +119,15 @@ def fast_tensor_load_encdec(path, percent=1.0, max_files=-1):
                 points, int(points * percent), replace=False)
             wf, turn, latent, ps = wf[keep_points], turn[keep_points], latent[keep_points], ps[keep_points]
         # append to list
-        wf_arr.append(tf.convert_to_tensor(wf))
-        turn_arr.append(tf.convert_to_tensor(turn))
-        latent_arr.append(tf.convert_to_tensor(latent))
-        ps_arr.append(tf.convert_to_tensor(ps))
+        wf_arr.append(wf)
+        turn_arr.append(turn)
+        latent_arr.append(latent)
+        ps_arr.append(ps)
 
     # make the final tensor
-    wf_arr = tf.concat(wf_arr, axis=0)
-    turn_arr = tf.concat(turn_arr, axis=0)
-    latent_arr = tf.concat(latent_arr, axis=0)
-    ps_arr = tf.concat(ps_arr, axis=0)
+    wf_arr = tf.convert_to_tensor(np.concatenate(wf_arr, axis=0))
+    turn_arr = tf.convert_to_tensor(np.concatenate(turn_arr, axis=0))
+    latent_arr = tf.convert_to_tensor(np.concatenate(latent_arr, axis=0))
+    ps_arr = tf.convert_to_tensor(np.concatenate(ps_arr, axis=0))
 
     return wf_arr, turn_arr, latent_arr, ps_arr

@@ -1,8 +1,9 @@
 # Train the ML model
 
-from mlp_lhc_tomography.utils import sample_files, fast_tensor_load_encdec
+from mlp_lhc_tomography.utils import sample_files
 from local_models import Tomoscope
 from local_utils import plot_loss, tomoscope_files_to_tensors, load_tomoscope_data
+from local_utils import fast_tensor_load_encdec
 import time
 import glob
 import shutil
