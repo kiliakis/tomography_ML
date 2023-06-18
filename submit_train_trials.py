@@ -79,6 +79,7 @@ if __name__ == '__main__':
             f.write(f"request_gpus            = {USE_GPU} \n")
             f.write(f"request_cpus            = {CPU_CORES} \n")
             f.write(f"request_memory            = 28000MB \n")
+            f.write(f'requirements = ( TARGET.OpSysAndVer =?= "AlmaLinux9" || TARGET.OpSysAndVer =?= "CentOS7")\n')
             # f.write(f"+RequestMemory            = 10000 \n")
             # f.write("requirements            = regexp(\"V100\", TARGET.CUDADeviceName) \n")
             # f.write("Arch                    = \"INTEL\" \n ")
