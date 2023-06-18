@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 from time import sleep
 import yaml
@@ -7,190 +8,21 @@ import argparse
 
 submission_system = 'condor'
 USERNAME = 'kiliakis'
-RUNTIME = 1         # in hours
-USE_GPU = 1          # request for a gpu node
-CPU_CORES = 1        # number of CPU cores
+
 if submission_system == 'condor':
     WORK = f"/afs/cern.ch/work/{USERNAME[0]}/{USERNAME}"
     # WORK = f"/eos/user/{USERNAME[0]}/{USERNAME}"
     PROJECT_DIR = f"{WORK}/git/tomography_ML"
-    PYTHON = f'{WORK}/install/anaconda3/bin/python3'
 else:
     print('Invalid submission system')
     exit()
+
+PYTHON = sys.executable
 ENCODER_SCRIPT = 'train_encoder_multiout.py'
 DECODER_SCRIPT = 'train_decoder.py'
+TOMOSCOPE_SCRIPT = 'train_tomoscope.py'
 
 TRIALS_DIR = os.path.join(PROJECT_DIR, 'trials')
-
-configs = [
-    {
-        'encoder': {
-            'epochs': 100,
-            'strides': [2, 2],
-            'activation': 'relu',
-            'pooling': None, 'pooling_size': [2, 2],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-            'dropout': 0.0,
-            'loss': 'mse', 
-            'lr': 1e-3,
-            'dataset%': 1,
-            'normalization': 'minmax',
-            'img_normalize': 'off',
-            'batchnorm': False,
-            'loss_weights': [6],
-            'batch_size': 32
-        },
-        'model_cfg': {
-            'phEr': {
-                'cropping': [0, 0],
-                'filters': [4, 8],
-                'kernel_size': [3, 3],
-                'dense_layers': [1024, 256, 32],
-                'use_bias': False,
-            },
-            'enEr': {
-                'cropping': [0, 0],
-                'filters': [4, 8, 16],
-                'kernel_size': [5, 5, 5],
-                'dense_layers': [1024, 512, 64],
-                'use_bias': False,
-            },
-            'bl': {
-                'cropping': [0, 0],
-                'filters': [8, 16, 32],
-                'kernel_size': [5, 5, 5],
-                'dense_layers': [1024, 512, 64],
-                'use_bias': False,
-            },
-            'inten': {
-                'cropping': [0, 0],
-                'filters': [8, 16, 32],
-                'kernel_size': [5, 5, 5],
-                'dense_layers': [1024, 256, 64],
-                'use_bias': False,
-
-            },
-            'Vrf': {
-                'cropping': [6, 6],
-                'filters': [8, 16, 32],
-                'kernel_size': [13, 7, 3],
-                'dense_layers': [1024, 256, 64],
-                'use_bias': False,
-            },
-            'mu': {
-                'cropping': [0, 0],
-                'filters': [4, 16, 64],
-                'kernel_size': [7, 5, 5],
-                'dense_layers': [1024, 256, 128],
-                'use_bias': False,
-            },
-            'VrfSPS': {
-                'cropping': [14, 14],
-                'filters': [8, 32],
-                'kernel_size': [9, 5],
-                'dense_layers': [1024, 256, 128],
-                'use_bias': False,
-                'conv_padding': 'same'
-            },
-        }
-    },
-
-    {
-        'encoder': {
-            'epochs': 100,
-            'strides': [2, 2],
-            'activation': 'relu',
-            'pooling': None, 'pooling_size': [2, 2],
-            'pooling_strides': [1, 1], 'pooling_padding': 'valid',
-            'dropout': 0.0,
-            'loss': 'mse',
-            'lr': 1e-3,
-            'dataset%': 1,
-            'normalization': 'minmax',
-            'img_normalize': 'off',
-            'loss_weights': [6],
-            'batch_size': 32
-        },
-        'model_cfg': {
-            'mu': {
-                'cropping': [0, 0],
-                'filters': [4, 16, 64],
-                'kernel_size': [13, 9, 7],
-                'dense_layers': [1024, 256, 128],
-            },
-            'VrfSPS': {
-                'cropping': [14, 14],
-                'filters': [8, 16, 32],
-                'kernel_size': [7, 7, 7],
-                'dense_layers': [1024, 512, 256],
-                'use_bias': False,
-                'conv_padding': 'same'
-            },
-        }
-    },
-
-
-    # {
-    #     'decoder': {
-    #         'epochs': 100,
-    #         'dense_layers': [8, 256, 1024],
-    #         'filters': [32, 16, 8, 1],
-    #         'kernel_size': 9,
-    #         'activation': 'relu',
-    #         'strides': [2, 2],
-    #         'final_kernel_size': 5,
-    #         'final_activation': 'tanh',
-    #         'dropout': 0.0,
-    #         'loss': 'mse',
-    #         'lr': 1e-3,
-    #         'dataset%': 0.7,
-    #         'normalization': 'minmax',
-    #         'ps_normalize': 'off',
-    #         'loss_weights': [0, 1, 2, 3, 4, 5, 6, 7],
-    #     },
-    # },
-    # {
-    #     'decoder': {
-    #         'epochs': 100,
-    #         'dense_layers': [8, 256, 1024],
-    #         'filters': [32, 16, 8, 1],
-    #         'kernel_size': 9,
-    #         'activation': 'relu',
-    #         'strides': [2, 2],
-    #         'final_kernel_size': 5,
-    #         'final_activation': 'tanh',
-    #         'dropout': 0.0,
-    #         'loss': 'mse', 
-    #         'lr': 1e-3,
-    #         'dataset%': 0.8,
-    #         'normalization': 'minmax',
-    #         'ps_normalize': 'off',
-    #         'loss_weights': [0, 1, 2, 3, 4, 5, 6, 7],
-
-    #    },
-    # },
-    # {
-    #     'decoder': {
-    #         'epochs': 100,
-    #         'dense_layers': [8, 256, 1024],
-    #         'filters': [32, 16, 8, 1],
-    #         'kernel_size': 9,
-    #         'activation': 'relu',
-    #         'strides': [2, 2],
-    #         'final_kernel_size': 5,
-    #         'final_activation': 'tanh',
-    #         'dropout': 0.0,
-    #         'loss': 'mse', 
-    #         'lr': 1e-3,
-    #         'dataset%': 0.9,
-    #         'normalization': 'minmax',
-    #         'ps_normalize': 'off',
-    #         'loss_weights': [0, 1, 2, 3, 4, 5, 6, 7],
-    #     },
-    # },
-
-]
 
 parser = argparse.ArgumentParser(description='Submit multiple train trials in htcondor',
                                  usage='python train_scan.py')
@@ -198,8 +30,30 @@ parser = argparse.ArgumentParser(description='Submit multiple train trials in ht
 parser.add_argument('-dry', '--dry-run', action='store_true',
                     help='Do not submit, just prepare everything.')
 
+parser.add_argument('-c', '--configs', nargs='+', type=str,
+                    help='YAML files with trial configurations to run.')
+
+parser.add_argument('-no-gpu', '--no-gpu', action='strore_true',
+                    help='Do not request for a GPU node.')
+
+parser.add_argument('-cores', '--cores', type=int, default=1,
+                    help='Number of CPU cores to ask for.')
+
+parser.add_argument('-time', '--time', type=int, default=1,
+                    help='Runtime per cofiguration in hours.')
+
 if __name__ == '__main__':
     args = parser.parse_args()
+    RUNTIME = args.time
+    USE_GPU = not args.no_gpu
+    CPU_CORES = args.cores
+    configs = []
+    for yamlfile in args.configs:
+        print(f'Loading {yamlfile}')
+        with open(yamlfile) as f:
+            temp_configs = yaml.load(f, Loader=yaml.FullLoader)
+        print(f'{yamlfile} loaded, found {len(temp_configs)} configurations')
+
     for config in configs:
         config['timestamp'] = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
         trial_dir = os.path.join(TRIALS_DIR, config['timestamp'])
@@ -247,9 +101,13 @@ if __name__ == '__main__':
             if 'encoder' in config:
                 f.write(
                     f"{PYTHON} {ENCODER_SCRIPT} -c {config_file_name}\n")
-            if 'decoder' in config:
+            elif 'decoder' in config:
                 f.write(
                     f"{PYTHON} {DECODER_SCRIPT} -c {config_file_name}\n")
+            elif 'tomoscope' in config:
+                f.write(
+                    f"{PYTHON} {TOMOSCOPE_SCRIPT} -c {config_file_name}\n")
+
 
         # Print the shell script content on the screen
         # subprocess.run(["cat", "execute.sh"])

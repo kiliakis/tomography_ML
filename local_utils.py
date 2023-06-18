@@ -107,13 +107,11 @@ def fast_tensor_load_encdec(path, percent=1.0, max_files=-1):
     if max_files > 0:
         all_files = all_files[max_files]
     # For every file that matches the regexp
-    print(len(all_files))
     for file in all_files:
         print(f'Loading {file}')
         # decompress and load file
         with np.load(file) as data:
             wf, turn, latent, ps = data['WFs'], data['turns'], data['latents'], data['PSs']
-        print('ps shape:', ps.shape)
         # Keep a smaller percentage if needed
         if percent < 1 and percent > 0:
             points = len(wf)

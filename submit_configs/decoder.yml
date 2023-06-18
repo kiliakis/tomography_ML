@@ -1,0 +1,99 @@
+- decoder:
+    activation: relu
+    dataset%: 0.7
+    dense_layers:
+    - 8
+    - 256
+    - 1024
+    dropout: 0.0
+    epochs: 100
+    filters:
+    - 32
+    - 16
+    - 8
+    - 1
+    final_activation: tanh
+    final_kernel_size: 5
+    kernel_size: 9
+    loss: mse
+    loss_weights:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    lr: 0.001
+    normalization: minmax
+    ps_normalize: 'off'
+    strides:
+    - 2
+    - 2
+- decoder:
+    activation: relu
+    dataset%: 0.8
+    dense_layers:
+    - 8
+    - 256
+    - 1024
+    dropout: 0.0
+    epochs: 100
+    filters:
+    - 32
+    - 16
+    - 8
+    - 1
+    final_activation: tanh
+    final_kernel_size: 5
+    kernel_size: 9
+    loss: mse
+    loss_weights:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    lr: 0.001
+    normalization: minmax
+    ps_normalize: 'off'
+    strides:
+    - 2
+    - 2
+- decoder:
+    activation: relu
+    dataset%: 0.9
+    dense_layers:
+    - 8
+    - 256
+    - 1024
+    dropout: 0.0
+    epochs: 100
+    filters:
+    - 32
+    - 16
+    - 8
+    - 1
+    final_activation: tanh
+    final_kernel_size: 5
+    kernel_size: 9
+    loss: mse
+    loss_weights:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    lr: 0.001
+    normalization: minmax
+    ps_normalize: 'off'
+    strides:
+    - 2
+    - 2
