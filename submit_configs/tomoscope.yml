@@ -23,7 +23,7 @@
     dataset%: 1
     batch_size: 32
     normalization: minmax
-    img_normalize: off
+    img_normalize: 'off'
 - tomoscope:
     epochs: 100
     output_turns: 10
@@ -102,3 +102,4 @@
     batch_size: 32
     normalization: minmax
     img_normalize: 'off'
+

@@ -33,7 +33,7 @@ parser.add_argument('-dry', '--dry-run', action='store_true',
 parser.add_argument('-c', '--configs', nargs='+', type=str,
                     help='YAML files with trial configurations to run.')
 
-parser.add_argument('-no-gpu', '--no-gpu', action='strore_true',
+parser.add_argument('-no-gpu', '--no-gpu', action='store_true',
                     help='Do not request for a GPU node.')
 
 parser.add_argument('-cores', '--cores', type=int, default=1,
@@ -52,6 +52,7 @@ if __name__ == '__main__':
         print(f'Loading {yamlfile}')
         with open(yamlfile) as f:
             temp_configs = yaml.load(f, Loader=yaml.FullLoader)
+        configs += temp_configs
         print(f'{yamlfile} loaded, found {len(temp_configs)} configurations')
 
     for config in configs:

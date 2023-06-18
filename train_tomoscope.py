@@ -151,11 +151,11 @@ if __name__ == '__main__':
             TRAINING_PATH = os.path.join(ML_dir, 'tomoscope-training-??.npz')
             VALIDATION_PATH = os.path.join(ML_dir, 'tomoscpe-validation-??.npz')
 
-            x_train, y_train = fast_tensor_load_encdec(
+            x_train, turn_train, latent_train, y_train = fast_tensor_load_encdec(
                 TRAINING_PATH, train_cfg['dataset%'])
             print('Number of Training files: ', len(y_train))
 
-            x_valid, y_valid = fast_tensor_load_encdec(
+            x_valid, turn_valid, latent_valid, y_valid = fast_tensor_load_encdec(
                 VALIDATION_PATH, train_cfg['dataset%'])
             print('Number of Validation files: ', len(y_valid))
 
