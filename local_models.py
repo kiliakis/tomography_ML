@@ -2,6 +2,24 @@ import keras.backend as K
 import tensorflow as tf
 from tensorflow import keras
 import numpy as np
+import os
+
+def custom_loss(ps_true, ps_pred):
+    """Custom loss function that recreates the WF from the PS and compares them.
+    Args:
+        ps_true (_type_): The true PS with dim (128, 128, output_turns)
+        ps_pred (_type_): The predicted PS with dim (128, 128, output_turns)
+
+    Returns:
+        _type_: _description_
+    """
+    # print(ps_pred.shape, ps_true.shape)
+
+    wf_pred = K.sum(ps_pred, axis=1)
+    wf_true = K.sum(ps_true, axis=1)
+    # print(wf_pred.shape, wf_true.shape)
+    loss = K.mean(K.square(wf_true - wf_pred))
+    return loss
 
 
 class Tomoscope(keras.Model):
@@ -12,10 +30,11 @@ class Tomoscope(keras.Model):
     def __init__(self, output_name='tomoscope', input_shape=(128, 128, 1),
                  output_turns = 1, cropping=[[0, 0], [0, 0]],
                  enc_dense_layers=[1024, 256, 64], enc_filters=[8, 16, 32],
-                 dec_dense_layers=[256, 1024], dec_filters=[32, 16, 8],
+                 dec_dense_layers=[256, 1024], dec_filters=[32, 16, 1],
                  enc_kernel_size=3, dec_kernel_size=3,
                  enc_strides=[2, 2], dec_strides=[2,2],
                  enc_activation='relu', dec_activation='relu',
+                 final_activation='tanh',
                  enc_pooling=None, dec_pooling=None,
                  enc_pooling_size=[2, 2], dec_pooling_size=[2, 2],
                  enc_pooling_strides=[1, 1], dec_pooling_strides=[1, 1],
@@ -150,7 +169,7 @@ class Tomoscope(keras.Model):
                 filters=dec_filters[i], kernel_size=dec_kernel_size[i], strides=dec_strides[i],
                 activation=dec_activation, name=f'decoder_cnn_{i+1}', padding='same')(x)
 
-        outputs = keras.layers.Activation(activation='linear', name='linear_activation')(x)
+        outputs = keras.layers.Activation(activation=final_activation, name='final_activation')(x)
 
         # print('outputs shape:', outputs.shape)
 
@@ -158,6 +177,9 @@ class Tomoscope(keras.Model):
         # Also initialize the optimizer and compile the model
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
         self.model = keras.Model(inputs=inputs, outputs=outputs)
+        
+        if loss == 'custom':
+            loss = custom_loss
         self.model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
 
@@ -165,8 +187,10 @@ class Tomoscope(keras.Model):
         tomography = self.model(waterfall)
         return tomography
 
-    def load(self, weights_file):
-        self.model = keras.models.load_model(weights_file)
+    def load(self, weights_dir, compile=False):
+        weights_file = os.path.join(weights_dir, 'tomoscope.h5')
+        assert os.path.exists(weights_file), f'Weights file {weights_file} does not exist'
+        self.model = keras.models.load_model(weights_file, compile=compile)
 
     def save(self, weights_file):
         self.model.save(weights_file)

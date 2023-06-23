@@ -39,7 +39,7 @@ parser.add_argument('-no-gpu', '--no-gpu', action='store_true',
 parser.add_argument('-cores', '--cores', type=int, default=1,
                     help='Number of CPU cores to ask for.')
 
-parser.add_argument('-time', '--time', type=int, default=1,
+parser.add_argument('-t', '--time', type=int, default=1,
                     help='Runtime per cofiguration in hours.')
 
 if __name__ == '__main__':
@@ -109,10 +109,6 @@ if __name__ == '__main__':
             elif 'tomoscope' in config:
                 f.write(
                     f"{PYTHON} {TOMOSCOPE_SCRIPT} -c {config_file_name}\n")
-
-
-        # Print the shell script content on the screen
-        # subprocess.run(["cat", "execute.sh"])
 
         # sleep to avoid directory collisions
         sleep(1.5)

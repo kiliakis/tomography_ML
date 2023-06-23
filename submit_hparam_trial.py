@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 from time import sleep
 import yaml
@@ -6,103 +7,21 @@ from datetime import datetime
 import argparse
 
 submission_system = 'condor'
-USERNAME = 'kiliakis'
-RUNTIME = 1         # in hours
-USE_GPU = 1          # request for a gpu node
-CPU_CORES = 1        # number of CPU cores
+
 if submission_system == 'condor':
+    USERNAME = os.environ['USER']
     WORK = f"/afs/cern.ch/work/{USERNAME[0]}/{USERNAME}"
-    # WORK = f"/eos/user/{USERNAME[0]}/{USERNAME}"
     PROJECT_DIR = f"{WORK}/git/tomography_ML"
-    PYTHON = f'{WORK}/install/anaconda3/bin/python3'
 else:
     print('Invalid submission system')
     exit()
-ENCODER_SCRIPT = 'train_encoder_hyperparam_multiout.py'
-DECODER_SCRIPT = 'train_decoder-hyperparam.py'
+
+PYTHON = sys.executable
+ENCODER_SCRIPT = 'train_encoder_hyperparam_multiout_optuna.py'
+DECODER_SCRIPT = 'train_decoder_hyperparam_optuna.py'
+TOMOSCOPE_SCRIPT = 'train_tomoscope_hyperparam_optuna.py'
 
 TRIALS_DIR = os.path.join(PROJECT_DIR, 'hparam_trials')
-
-var_names = ['phEr', 'enEr', 'bl',
-             'inten', 'Vrf', 'mu', 'VrfSPS']
-
-configs = [
-    # {
-    #     'encoder': {
-    #         'epochs': 50,
-    #         'dense_layers': [1024, 512, 128],
-    #         'filters': [8, 16, 32],
-    #         'cropping': [0, 0],
-    #         'kernel_size': [5, 5, 5],
-    #         'activation': 'relu',
-    #         'strides': [2, 2],
-    #         'pooling': [None],
-    #         'pooling_size': [2, 2],
-    #         'pooling_strides': [1, 1],
-    #         'pooling_padding': 'valid',
-    #         'dropout': 0.,
-    #         'loss': 'mse',
-    #         'lr': 1e-3,
-    #         'dataset%': 1,
-    #         'normalization': 'minmax',
-    #         'img_normalize': 'off',
-    #         'loss_weights': [6],
-    #         'batch_size': 32,
-    #         'use_bias': False,
-    #         'batchnorm': False
-    #     },
-    #     'model_cfg': {
-    #         'VrfSPS': {
-    #             'cropping': [[14, 14]],
-    #             'conv_padding': ['same'],
-    #             'kernel_size': [[7, 7, 7], [5, 5, 5], [3, 3, 3],
-    #                             [11, 5, 3], [9, 7, 5],
-    #                             ],
-    #             'filters': [[4, 8, 16], [8, 16, 32], [4, 16, 64]],
-    #             'dense_layers': [[1024, 256, 128], [1024, 512, 256],
-    #                              [1024, 256], [512, 128], [512, 64]],
-    #         },
-    #     }
-    # },
-
-    {
-        'encoder': {
-            'epochs': 50,
-            'dense_layers': [1024, 512, 128],
-            'filters': [8, 16, 32],
-            'cropping': [0, 0],
-            'kernel_size': [5, 5, 5],
-            'activation': 'relu',
-            'pooling_size': [2, 2],
-            'pooling_strides': [1, 1],
-            'pooling_padding': 'valid',
-            'strides': [2, 2],
-            'pooling': [None],
-            'dropout': 0.,
-            'loss': 'mse',
-            'lr': 1e-3,
-            'dataset%': 1,
-            'normalization': 'minmax',
-            'img_normalize': 'off',
-            'loss_weights': [6],
-            'batch_size': 32,
-            'use_bias': False,
-            'batchnorm': False
-        },
-        'model_cfg': {
-            'VrfSPS': {
-                'cropping': [[14, 14]],
-                'conv_padding': ['same'],
-                'kernel_size': [[13, 9], [9, 9], [9, 5], [5, 5], [3, 3]
-                                ],
-                'filters': [[8, 16], [8, 32], [8, 64], [8, 8], [9, 12]],
-                'dense_layers': [
-                                 [1024, 256, 64, 16]],
-            },
-        }
-    },
-
-]
 
 parser = argparse.ArgumentParser(description='Submit multiple train trials in htcondor',
                                  usage='python train_scan.py')
@@ -110,8 +29,31 @@ parser = argparse.ArgumentParser(description='Submit multiple train trials in ht
 parser.add_argument('-dry', '--dry-run', action='store_true',
                     help='Do not submit, just prepare everything.')
 
+parser.add_argument('-c', '--configs', nargs='+', type=str,
+                    help='YAML files with trial configurations to run.')
+
+parser.add_argument('-no-gpu', '--no-gpu', action='store_true',
+                    help='Do not request for a GPU node.')
+
+parser.add_argument('-cores', '--cores', type=int, default=1,
+                    help='Number of CPU cores to ask for.')
+
+parser.add_argument('-t', '--time', type=int, default=1,
+                    help='Runtime per cofiguration in hours.')
+
 if __name__ == '__main__':
     args = parser.parse_args()
+    RUNTIME = args.time
+    USE_GPU = not args.no_gpu
+    CPU_CORES = args.cores
+    configs = []
+    for yamlfile in args.configs:
+        print(f'Loading {yamlfile}')
+        with open(yamlfile) as f:
+            temp_configs = yaml.load(f, Loader=yaml.FullLoader)
+        configs += temp_configs
+        print(f'{yamlfile} loaded, found {len(temp_configs)} configurations')
+
     for config in configs:
         config['timestamp'] = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
         trial_dir = os.path.join(TRIALS_DIR, config['timestamp'])
@@ -137,9 +79,8 @@ if __name__ == '__main__':
             f.write(f"request_gpus            = {USE_GPU} \n")
             f.write(f"request_cpus            = {CPU_CORES} \n")
             f.write(f"request_memory            = 28000MB \n")
-            # f.write(f"+RequestMemory            = 10000 \n")
+            f.write(f'requirements = ( TARGET.OpSysAndVer =?= "AlmaLinux9" || TARGET.OpSysAndVer =?= "CentOS7")\n')
             # f.write("requirements            = regexp(\"V100\", TARGET.CUDADeviceName) \n")
-            # f.write("Arch                    = \"INTEL\" \n ")
             f.write(f"+MaxRuntime            = {int(3600 * RUNTIME)} \n")
             f.write("queue")
 
@@ -162,9 +103,9 @@ if __name__ == '__main__':
             if 'decoder' in config:
                 f.write(
                     f"{PYTHON} {DECODER_SCRIPT} -c {config_file_name}\n")
-
-        # Print the shell script content on the screen
-        # subprocess.run(["cat", "execute.sh"])
+            elif 'tomoscope' in config:
+                f.write(
+                    f"{PYTHON} {TOMOSCOPE_SCRIPT} -c {config_file_name}\n")
 
         # sleep to avoid directory collisions
         sleep(1.5)

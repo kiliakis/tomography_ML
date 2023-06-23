@@ -5,7 +5,6 @@ from local_models import Tomoscope
 from local_utils import plot_loss, tomoscope_files_to_tensors, load_tomoscope_data
 from local_utils import fast_tensor_load_encdec
 import time
-import glob
 import shutil
 import tensorflow as tf
 from tensorflow import keras
@@ -14,7 +13,6 @@ import os
 import numpy as np
 from datetime import datetime
 import argparse
-import matplotlib.pyplot as plt
 import matplotlib as mpl
 mpl.use('Agg')
 
@@ -58,6 +56,7 @@ train_cfg = {
     'learning_rate': 1e-3,
     'dataset%': 0.1,
     'normalization': 'minmax', 'img_normalize': 'off',
+    'ps_normalize': 'off',
     'batch_size': 32
 }
 
@@ -146,7 +145,7 @@ if __name__ == '__main__':
         
         elif DATA_LOAD_METHOD == 'FAST_TENSOR':
             assert train_cfg['normalization'] == 'minmax'
-            # assert train_cfg['ps_normalize'] == 'off'
+            assert train_cfg['ps_normalize'] == 'off'
             assert train_cfg['img_normalize'] == 'off'
 
             TRAINING_PATH = os.path.join(ML_dir, 'tomoscope-training-??.npz')
@@ -170,29 +169,6 @@ if __name__ == '__main__':
         start_t = time.time()
         # Model instantiation
         input_shape = x_train.shape[1:]
-
-        import keras.backend as K
-
-        def custom_loss(ps_true, ps_pred):
-            """Custom loss function that recreates the WF from the PS and compares them.
-
-            Args:
-                ps_true (_type_): The true PS with dim (128, 128, output_turns)
-                ps_pred (_type_): The predicted PS with dim (128, 128, output_turns)
-
-            Returns:
-                _type_: _description_
-            """
-            # print(ps_pred.shape, ps_true.shape)
-
-            wf_pred = K.sum(ps_pred, axis=1)
-            wf_true = K.sum(ps_true, axis=1)
-            # print(wf_pred.shape, wf_true.shape)
-            loss = K.mean(K.square(wf_true - wf_pred))
-            return loss
-
-        if train_cfg['loss'] == 'custom':
-            train_cfg['loss'] = custom_loss
 
         tomoscope = Tomoscope(input_shape=input_shape, **train_cfg)
 

@@ -1,0 +1,49 @@
+- encoder:
+    epochs: 25
+    strides: [2, 2]
+    activation: relu
+    pooling: null
+    pooling_padding: valid
+    pooling_size: [2, 2]
+    pooling_strides: [1, 1]
+    normalization: minmax
+    img_normalize: 'off'
+    batchnorm: false
+    dropout: 0.0
+    loss: mse
+    lr: 0.001
+    dataset%: 0.5
+    batch_size: 32
+    param_space:
+      VrfSPS:
+        conv_padding: [same]
+        cropping: ['0,0', '7,7', '14,14']
+        dense_layers: ['1024,512,128', '1024,512,64', '1024,256,64', '1024,256', '512,128', '256,64']
+        filters: ['4,8,16', '8,16,32', '16,32,64', '32,64,128']
+        kernel_size: ['13,11,9', '9,9,7', '9,7,7', '7,7,5', '7,5,5', '5,5,3', '3,3,3']
+        use_bias: [false]
+
+- encoder:
+    epochs: 25
+    strides: [2, 2]
+    activation: relu
+    pooling: null
+    pooling_padding: valid
+    pooling_size: [2, 2]
+    pooling_strides: [1, 1]
+    normalization: minmax
+    img_normalize: 'off'
+    batchnorm: false
+    dropout: 0.0
+    loss: mse
+    lr: 0.001
+    dataset%: 0.5
+    batch_size: 32
+    param_space:
+      VrfSPS:
+        conv_padding: [same]
+        cropping: ['0,0', '7,7', '14,14']
+        dense_layers: ['1024,512,128', '1024,512,64', '1024,256,64', '1024,256', '512,128', '256,64']
+        filters: ['4,8', '4,32', '8,16', '8,32', '16,32', '16,64', '32,64']
+        kernel_size: ['13,11', '13,9', '9,7', '9,5', '7,5', '5,3']
+        use_bias: [false]

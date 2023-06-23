@@ -2,91 +2,13 @@
     epochs: 100
     output_turns: 10
     cropping: [0, 0]
-    enc_filters: [4, 8, 16]
-    dec_filters: [8, 16, 10]
-    enc_kernel_size: 3
-    dec_kernel_size: 3
+    enc_filters: [8, 16, 32]
+    dec_filters: [64, 32, 10]
+    enc_kernel_size: [7, 7, 5]
+    dec_kernel_size: [7, 7, 7]
     enc_strides: [2, 2]
     dec_strides: [2, 2]
-    enc_dense_layers: [1024, 256]
-    dec_dense_layers: [1024]
-    enc_activation: relu
-    dec_activation: relu
-    enc_dropout: 0.0
-    dec_dropout: 0.0
-    enc_pooling: null
-    dec_pooling: null
-    use_bias: false
-    batchnorm: false
-    lr: 0.001
-    loss: custom
-    dataset%: 1
-    batch_size: 32
-    normalization: minmax
-    img_normalize: 'off'
-- tomoscope:
-    epochs: 100
-    output_turns: 10
-    cropping: [0, 0]
-    enc_filters: [4, 8, 16]
-    dec_filters: [8, 16, 10]
-    enc_kernel_size: 3
-    dec_kernel_size: 3
-    enc_strides: [2, 2]
-    dec_strides: [2, 2]
-    enc_dense_layers: [1024]
-    dec_dense_layers: [256]
-    enc_activation: relu
-    dec_activation: relu
-    enc_dropout: 0.0
-    dec_dropout: 0.0
-    enc_pooling: null
-    dec_pooling: null
-    use_bias: false
-    batchnorm: false
-    lr: 0.001
-    loss: custom
-    dataset%: 1
-    batch_size: 32
-    normalization: minmax
-    img_normalize: 'off'
-- tomoscope:
-    epochs: 100
-    output_turns: 10
-    cropping: [0, 0]
-    enc_filters: [4, 8, 16]
-    dec_filters: [8, 16, 10]
-    enc_kernel_size: 3
-    dec_kernel_size: 3
-    enc_strides: [2, 2]
-    dec_strides: [2, 2]
-    enc_dense_layers: [256]
-    dec_dense_layers: [256]
-    enc_activation: relu
-    dec_activation: relu
-    enc_dropout: 0.0
-    dec_dropout: 0.0
-    enc_pooling: null
-    dec_pooling: null
-    use_bias: false
-    batchnorm: false
-    lr: 0.001
-    loss: custom
-    dataset%: 1
-    batch_size: 32
-    normalization: minmax
-    img_normalize: 'off'
-- tomoscope:
-    epochs: 100
-    output_turns: 10
-    cropping: [0, 0]
-    enc_filters: [4, 8, 16]
-    dec_filters: [8, 16, 10]
-    enc_kernel_size: 3
-    dec_kernel_size: 3
-    enc_strides: [2, 2]
-    dec_strides: [2, 2]
-    enc_dense_layers: [256]
+    enc_dense_layers: []
     dec_dense_layers: []
     enc_activation: relu
     dec_activation: relu
@@ -97,9 +19,10 @@
     use_bias: false
     batchnorm: false
     lr: 0.001
-    loss: custom
+    loss: mse
     dataset%: 1
     batch_size: 32
+    final_activation: tanh
     normalization: minmax
     img_normalize: 'off'
-
+    ps_normalize: 'off'
