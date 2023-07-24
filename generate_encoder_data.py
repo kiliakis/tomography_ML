@@ -5,8 +5,8 @@ import pickle as pk
 import argparse
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from local_utils import extract_data_Fromfolder
-from local_utils import loadTF, calc_bin_centers
+from utils import extract_data_Fromfolder
+from utils import loadTF, calc_bin_centers
 
 IMG_OUTPUT_SIZE = 128
 zeropad = 14

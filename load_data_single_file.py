@@ -1,6 +1,6 @@
 import os
 import time
-from local_utils import fast_tensor_load
+from utils import fast_tensor_load
 
 data_dir = './tomo_data/datasets_decoder_TF_24-03-23'
 percent = 0.5

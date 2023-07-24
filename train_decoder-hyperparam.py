@@ -1,7 +1,7 @@
 # Train the ML model
 from utils import sample_files, decoder_files_to_tensors, load_decoder_data
 from models import Decoder
-from local_utils import plot_loss
+from utils import plot_loss
 from itertools import product
 import pickle
 import time

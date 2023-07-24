@@ -11,8 +11,8 @@ from datetime import datetime
 import argparse
 import matplotlib as mpl
 
-from local_utils import plot_loss
-from mlp_lhc_tomography.utils import sample_files, encoder_files_to_tensors, load_encoder_data
+from utils import plot_loss
+from utils import sample_files, encoder_files_to_tensors, load_encoder_data
 from models import EncoderSingle
 
 mpl.use('Agg')

@@ -1,7 +1,6 @@
 # Train the ML model
-from mlp_lhc_tomography.utils import sample_files
-from local_models import Tomoscope
-from local_utils import tomoscope_files_to_tensors, fast_tensor_load_encdec
+from models import Tomoscope
+from utils import tomoscope_files_to_tensors, fast_tensor_load_encdec, sample_files
 
 import matplotlib.pyplot as plt
 from itertools import product

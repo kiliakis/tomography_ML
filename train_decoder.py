@@ -1,9 +1,8 @@
 # Train the ML model
 
 from models import Decoder
-from utils import sample_files, fast_tensor_load
+from utils import sample_files, fast_tensor_load, plot_loss
 from utils import decoder_files_to_tensors, load_decoder_data
-from local_utils import plot_loss
 import time
 import glob
 import shutil
