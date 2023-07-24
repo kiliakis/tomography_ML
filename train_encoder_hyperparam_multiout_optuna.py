@@ -8,9 +8,9 @@ from optuna.visualization import plot_param_importances
 from optuna.visualization import plot_slice, plot_contour
 
 import argparse
-from mlp_lhc_tomography.utils import sample_files
-from mlp_lhc_tomography.utils import encoder_files_to_tensors, fast_tensor_load
-from mlp_lhc_tomography.models import EncoderSingle
+from utils import sample_files
+from utils import encoder_files_to_tensors, fast_tensor_load
+from models import EncoderSingle
 
 import pickle
 import time
@@ -78,7 +78,6 @@ train_cfg = {
         },
     }
 }
-
 
 category_keys = {
     'use_bias': 'bias',

@@ -1,7 +1,7 @@
 import os
 import numpy as np
-from mlp_lhc_tomography.utils import sample_files, encoder_files_to_tensors
-from mlp_lhc_tomography.utils import decoder_files_to_tensors, encdec_files_to_tensors
+from utils import sample_files, encoder_files_to_tensors
+from utils import decoder_files_to_tensors, encdec_files_to_tensors
 from local_utils import tomoscope_files_to_tensors
 
 # data_dir = './tomo_data/datasets_encoder_TF_24-03-23'

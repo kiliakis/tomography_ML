@@ -5,8 +5,8 @@ import pickle as pk
 import argparse
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from mlp_lhc_tomography.utils import extract_data_Fromfolder
-from mlp_lhc_tomography.utils import loadTF, calc_bin_centers
+from local_utils import extract_data_Fromfolder
+from local_utils import loadTF, calc_bin_centers
 
 IMG_OUTPUT_SIZE = 128
 zeropad = 14
@@ -16,8 +16,8 @@ skipturns = 3
 # Input output directories
 eos = '/eos/user/k/kiliakis/'
 simulations_dir = eos + '/tomo_data/results_tomo_02-12-22'
-save_dir = eos + '/tomo_data/datasets_encoder_TF_24-03-23'
-# save_dir = eos + '/tomo_data/temp'
+# save_dir = eos + '/tomo_data/datasets_encoder_TF_24-03-23'
+save_dir = eos + '/tomo_data/temp'
 
 
 parser = argparse.ArgumentParser(
@@ -26,7 +26,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-f', '--first', type=int, default=0,
                     help='The first simulation dir.')
 
-parser.add_argument('-l', '--last', type=int, default=-1,
+parser.add_argument('-l', '--last', type=int, default=1,
                     help='The last simulation dir to use. -1 to process all of them.')
 
 parser.add_argument('-d', '--dry-run', type=int, default=0,

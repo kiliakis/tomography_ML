@@ -13,10 +13,10 @@ import argparse
 import matplotlib as mpl
 mpl.use('Agg')
 
-from mlp_lhc_tomography.models import EncoderSingle
-from mlp_lhc_tomography.utils import sample_files, load_encoder_data
-from mlp_lhc_tomography.utils import encoder_files_to_tensors, fast_tensor_load
-from local_utils import plot_loss
+from models import EncoderSingle, EncoderSingleViT
+from utils import sample_files, load_encoder_data
+from utils import encoder_files_to_tensors, fast_tensor_load
+from utils import plot_loss
 
 parser = argparse.ArgumentParser(description='Train the encoder/ decoder models',
                                  usage='python train_model.py -c config.yml')
@@ -34,9 +34,12 @@ timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 # Data specific
 IMG_OUTPUT_SIZE = 128
 DATA_LOAD_METHOD='FAST_TENSOR' # it can be TENSOR or DATASET or FAST_TENSOR
+MODEL_TYPE = 'EncoderSingleViT' # it can be EncoderSingle or EncoderSingleViT
 num_Turns_Case = 1
 var_names = ['phEr', 'enEr', 'bl',
              'inten', 'Vrf', 'mu', 'VrfSPS']
+
+
 
 # Train specific
 train_cfg = {
@@ -327,15 +330,18 @@ if __name__ == '__main__':
         input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
         models = {}
 
-        for i in train_cfg['loss_weights']:
-            var_name = var_names[i]
+        for var_name in model_cfg.keys():
+            i = var_names.index(var_name)
             print(f'\n---- Initializing model: {var_name} ----\n')
             
             cfg = train_cfg.copy()
             cfg.update(model_cfg.get(var_name, {}))
             model_cfg[var_name] = cfg
-            
-            model = EncoderSingle(output_name=var_name, input_shape=input_shape, **cfg)
+            if MODEL_TYPE == 'EncoderSingle':
+                model = EncoderSingle(output_name=var_name, input_shape=input_shape, **cfg)
+            elif MODEL_TYPE == 'EncoderSingleViT':
+                model = EncoderSingleViT(output_name=var_name, input_shape=input_shape, **cfg)
+
             print(model.model.summary())
 
             if 'TENSOR' in DATA_LOAD_METHOD:

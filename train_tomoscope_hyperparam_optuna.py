@@ -8,9 +8,9 @@ from optuna.visualization import plot_param_importances
 from optuna.visualization import plot_slice, plot_contour
 
 import argparse
-from mlp_lhc_tomography.utils import sample_files
-from local_models import Tomoscope
-from local_utils import tomoscope_files_to_tensors, fast_tensor_load_encdec
+from utils import sample_files
+from models import Tomoscope
+from utils import tomoscope_files_to_tensors, fast_tensor_load_encdec
 
 from itertools import product
 import pickle
@@ -38,63 +38,115 @@ timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 DATA_LOAD_METHOD = 'FAST_TENSOR'  # it can be TENSOR or DATASET or FAST_TENSOR
 
+N_TRIALS = 100
+TIMEOUT = 60*60*1  # 12 hours
+
+
 # Train specific
 train_cfg = {
-    'epochs': 25, 'output_turns': 10,
+    'epochs': 100, 'output_turns': 1,
     'cropping': [0, 0],
-    'enc_dense_layers': [1024, 256],
-    'dec_dense_layers': [],
-    'enc_filters': [4, 8, 16],
-    'dec_filters': [64, 32, 10],
-    'enc_kernel_size': 5,
-    'dec_kernel_size': [7, 7, 7],
+    'enc_filters': [16, 32, 64, 128],
+    'dec_filters': [64, 32, 16],
+    'enc_kernel_size': 4,
+    'dec_kernel_size': 4,
     'enc_strides': [2, 2],
     'dec_strides': [2, 2],
     'enc_activation': 'relu',
     'dec_activation': 'relu',
     'final_activation': 'tanh',
-    'enc_pooling': None, 'dec_pooling': None,
-    'enc_pooling_size': [0, 0], 'dec_pooling_size': [0, 0],
-    'enc_pooling_strides': [1, 1], 'dec_pooling_strides': [1, 1],
-    'enc_pooling_padding': 'valid', 'dec_pooling_padding': 'valid',
+    'enc_batchnorm': False, 'dec_batchnorm': True,
+    'enc_conv_padding': 'same', 'dec_conv_padding': 'same',
     'enc_dropout': 0.0, 'dec_dropout': 0.0,
     'metrics': [], 'use_bias': False, 'batchnorm': False,
-    'learning_rate': 1e-3,
-    'dataset%': 0.5, 'loss': 'mse',
+    'learning_rate': 2e-4,
+    'dataset%': 1,
     'normalization': 'minmax', 'img_normalize': 'off',
     'ps_normalize': 'off',
     'batch_size': 32
 }
 
+# # Train specific
+# train_cfg = {
+#     'epochs': 100, 'output_turns': 1,
+#     'cropping': [0, 0],
+#     'enc_dense_layers': [],
+#     'dec_dense_layers': [],
+#     'enc_filters': [16, 32, 64],
+#     'dec_filters': [64, 32, 1],
+#     'enc_kernel_size': [9, 7, 5],
+#     'dec_kernel_size': [7, 7, 7],
+#     'enc_strides': [2, 2],
+#     'dec_strides': [2, 2],
+#     'enc_activation': 'relu',
+#     'dec_activation': 'relu',
+#     'final_activation': 'tanh',
+#     'enc_pooling': None, 'dec_pooling': None,
+#     'enc_pooling_size': [0, 0], 'dec_pooling_size': [0, 0],
+#     'enc_pooling_strides': [1, 1], 'dec_pooling_strides': [1, 1],
+#     'enc_pooling_padding': 'valid', 'dec_pooling_padding': 'valid',
+#     'enc_dropout': 0.0, 'dec_dropout': 0.0,
+#     'metrics': [], 'use_bias': False, 'batchnorm': False,
+#     'learning_rate': 1e-3,
+#     'dataset%': 1, 'loss': 'mse',
+#     'normalization': 'minmax', 'img_normalize': 'off',
+#     'ps_normalize': 'off',
+#     'batch_size': 32
+# }
+
 param_space = {
-    'enc_kernel_size': [
-        '9,9,5', '9,7,5',
-        '7,7,7', '7,7,5',
-        '5,5,5', '3,3,3',
-    ],
-    'dec_kernel_size': [
-        '9,9,5', '9,7,5',
-        '7,7,7', '7,7,5',
-        '5,5,5', '3,3,3',
-    ],
-    'enc_filters': ['4,8,16', '8,16,32', '16,32,64'],
-    'dec_filters': ['64,32,10', '32,16,10', '4,8,10'],
-    'enc_dense_layers': ['', '16', '64', '256'],
-    'dec_dense_layers': ['', '16', '64', '256'],
+    'enc_filters': ['16,32,64,128', '8,16,32,64', '32,64,128,256', '16,32,64,64'],
+    'dec_filters': ['64,32,16', '32,16,8', '128,64,32', '64,64,32', '64,32,32'],
+    'final_activation': ['linear', 'tanh'],
+    'enc_activation': ['relu', 'leakyrelu'],
+    'dec_activation': ['relu', 'leakyrelu'],
+    'enc_batchnorm': [False, True],
+    'dec_batchnorm': [False, True]
 }
+
+split_keys = ['enc_kernel_size', 'enc_filters', 'enc_dense_layers', 'dec_kernel_size', 'dec_filters', 'dec_dense_layers',
+              'cropping']
+
+
+category_keys = {
+    'enc_kernel_size': 'e_kr_sz',
+    'enc_filters': 'e_flt',
+    'enc_dense_layers': 'e_lrs',
+    'dec_kernel_size': 'd_kr_sz',
+    'dec_filters': 'd_flt',
+    'dec_dense_layers': 'd_lrs',
+    'cropping': 'crp',
+    'use_bias': 'bias',
+    'batch_size': 'btch_sz',
+    'final_activation': 'fnl_activ',
+    'enc_activation': 'enc_activ',
+    'dec_activation': 'dec_activ',
+    'enc_batchnorm': 'enc_norm',
+    'dec_batchnorm': 'dec_norm'
+
+}
+
 
 
 def train_test_model(x_train, y_train, x_valid, y_valid, train_cfg, trial):
     """Train and test the model with the given hyperparameters.
     """
-    hparams = {
-        'enc_kernel_size': [int(i) for i in trial.suggest_categorical('e_kr_sz', param_space['enc_kernel_size']).split(',') if i != ''],
-        'enc_filters': [int(i) for i in trial.suggest_categorical('e_flt', param_space['enc_filters']).split(',') if i != ''],
-        'enc_dense_layers': [int(i) for i in trial.suggest_categorical('e_lrs', param_space['enc_dense_layers']).split(',') if i != ''],
-        'dec_kernel_size': [int(i) for i in trial.suggest_categorical('d_kr_sz', param_space['dec_kernel_size']).split(',') if i != ''],
-        'dec_filters': [int(i) for i in trial.suggest_categorical('d_flt', param_space['dec_filters']).split(',') if i != ''],
-        'dec_dense_layers': [int(i) for i in trial.suggest_categorical('d_lrs', param_space['dec_dense_layers']).split(',') if i != ''],
-    }
+    hparams = {}
+    for var in param_space:
+        value = trial.suggest_categorical(
+            category_keys.get(var, var), param_space[var])
+        if var in split_keys and isinstance(value, str):
+            value = [int(i.strip()) for i in value.split(',') if i != '']
+        hparams[var] = value
+
+    # hparams = {
+    #     'enc_kernel_size': [int(i) for i in trial.suggest_categorical('e_kr_sz', param_space['enc_kernel_size']).split(',') if i != ''],
+    #     'enc_filters': [int(i) for i in trial.suggest_categorical('e_flt', param_space['enc_filters']).split(',') if i != ''],
+    #     'enc_dense_layers': [int(i) for i in trial.suggest_categorical('e_lrs', param_space['enc_dense_layers']).split(',') if i != ''],
+    #     'dec_kernel_size': [int(i) for i in trial.suggest_categorical('d_kr_sz', param_space['dec_kernel_size']).split(',') if i != ''],
+    #     'dec_filters': [int(i) for i in trial.suggest_categorical('d_flt', param_space['dec_filters']).split(',') if i != ''],
+    #     'dec_dense_layers': [int(i) for i in trial.suggest_categorical('d_lrs', param_space['dec_dense_layers']).split(',') if i != ''],
+    # }
     cfg = train_cfg.copy()
     cfg.update(hparams)
 
@@ -217,6 +269,8 @@ if __name__ == '__main__':
             VALIDATION_PATH, train_cfg['dataset%'])
         print('Number of Validation files: ', len(y_valid))
 
+        y_train = y_train[:, :, :, :train_cfg['output_turns']]
+        y_valid = y_valid[:, :, :, :train_cfg['output_turns']]
     else:
         exit('DATA_LOAD_METHOD not recognised')
 
@@ -230,7 +284,7 @@ if __name__ == '__main__':
         direction='minimize', pruner=optuna.pruners.MedianPruner())
     try:
         study.optimize(lambda trial: train_test_model(x_train, y_train, x_valid, y_valid, train_cfg, trial),
-                   gc_after_trial=True, n_jobs=1, n_trials=2000, timeout=3600*1.5)
+                   gc_after_trial=True, n_jobs=1, n_trials=N_TRIALS, timeout=TIMEOUT)
     except KeyboardInterrupt:
         print('KeyboardInterrupt')
     
@@ -276,42 +330,3 @@ if __name__ == '__main__':
     with open(fname, 'wb') as handle:
         pickle.dump(study, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    # print(f'\n---- HyperParam tuning for tomoscope ----\n')
-    # session_num = 0
-
-    # # Load param space
-    # # param_space = model_cfg.get(var_name, {})
-    # keys, values = zip(*param_space.items())
-    # total_runs = np.prod([len(v) for v in param_space.values()])
-
-    # overall_dict = {}
-    # for bundle in product(*values):
-    #     hparams = dict(zip(keys, bundle))
-    #     run_name = f"run-{session_num}"
-    #     print(f'--- Starting trial: {run_name}/{total_runs}')
-    #     print(hparams)
-    #     start_t = time.time()
-    #     history, loss = train_test_model(x_train, y_train, x_valid, y_valid,
-    #                                      os.path.join(trial_dir, run_name), hparams)
-    #     total_time = time.time() - start_t
-    #     train_loss = np.min(history["loss"])
-    #     valid_loss = np.min(history["val_loss"])
-    #     overall_dict[run_name] = {
-    #         'time': total_time, 'train': train_loss, 'valid': valid_loss, 'history': history, 'data%': train_cfg['dataset%']}
-    #     overall_dict[run_name].update(hparams)
-    #     print(
-    #         f'---- Training complete, epochs: {len(history["loss"])}, train loss {np.min(history["loss"]):.2e}, valid loss {np.min(history["val_loss"]):.2e}, time {total_time:.2f}')
-
-    #     session_num += 1
-
-    #     # save every 10 sessions
-    #     if session_num % 10 == 0:
-    #         fname = os.path.join(hparams_dir, f'tomoscope_{timestamp}.pkl')
-    #         with open(fname, 'wb') as handle:
-    #             pickle.dump(overall_dict, handle,
-    #                         protocol=pickle.HIGHEST_PROTOCOL)
-
-    # # save final data
-    # fname = os.path.join(hparams_dir, f'tomoscope_{timestamp}.pkl')
-    # with open(fname, 'wb') as handle:
-    #     pickle.dump(overall_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)

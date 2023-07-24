@@ -8,9 +8,9 @@ from optuna.visualization import plot_param_importances
 from optuna.visualization import plot_slice, plot_contour
 
 import argparse
-from mlp_lhc_tomography.utils import sample_files, decoder_files_to_tensors
-from mlp_lhc_tomography.utils import fast_tensor_load
-from mlp_lhc_tomography.models import Decoder
+from utils import sample_files, decoder_files_to_tensors
+from utils import fast_tensor_load
+from models import Decoder
 import pickle
 import time
 import tensorflow as tf

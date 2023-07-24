@@ -1,28 +1,81 @@
+# - tomoscope:
+#     epochs: 200
+#     output_turns: 1
+#     cropping: [0, 0]
+#     enc_filters: [8, 16, 32]
+#     dec_filters: [32, 16, 1]
+#     enc_kernel_size: [9, 7, 5]
+#     dec_kernel_size: [7, 7, 7]
+#     enc_strides: [2, 2]
+#     dec_strides: [2, 2]
+#     enc_dense_layers: []
+#     dec_dense_layers: []
+#     enc_activation: relu
+#     dec_activation: relu
+#     enc_dropout: 0.0
+#     dec_dropout: 0.0
+#     enc_pooling: null
+#     dec_pooling: null
+#     use_bias: false
+#     batchnorm: false
+#     lr: 0.0002
+#     loss: mse
+#     dataset%: 1
+#     batch_size: 32
+#     final_activation: tanh
+#     normalization: minmax
+#     img_normalize: 'off'
+#     ps_normalize: 'off'
+
 - tomoscope:
-    epochs: 100
-    output_turns: 10
+    epochs: 200
+    output_turns: 1
     cropping: [0, 0]
-    enc_filters: [8, 16, 32]
-    dec_filters: [64, 32, 10]
-    enc_kernel_size: [7, 7, 5]
-    dec_kernel_size: [7, 7, 7]
+    enc_filters: [32, 64, 128, 256]
+    dec_filters: [64, 64, 32]
+    enc_kernel_size: 4
+    dec_kernel_size: 4
     enc_strides: [2, 2]
     dec_strides: [2, 2]
-    enc_dense_layers: []
-    dec_dense_layers: []
     enc_activation: relu
     dec_activation: relu
+    final_activation: linear
+    enc_batchnorm: False
+    dec_batchnorm: True
     enc_dropout: 0.0
     dec_dropout: 0.0
-    enc_pooling: null
-    dec_pooling: null
     use_bias: false
-    batchnorm: false
+    lr: 0.0002
+    loss: mse
+    dataset%: 1
+    batch_size: 32
+    normalization: minmax
+    img_normalize: 'off'
+    ps_normalize: 'off'
+
+- tomoscope:
+    epochs: 200
+    output_turns: 1
+    cropping: [0, 0]
+    enc_filters: [32, 64, 128, 256]
+    dec_filters: [64, 64, 32]
+    enc_kernel_size: 4
+    dec_kernel_size: 4
+    enc_strides: [2, 2]
+    dec_strides: [2, 2]
+    enc_activation: relu
+    dec_activation: relu
+    final_activation: linear
+    enc_batchnorm: False
+    dec_batchnorm: True
+    enc_dropout: 0.0
+    dec_dropout: 0.0
+    use_bias: false
     lr: 0.001
     loss: mse
     dataset%: 1
     batch_size: 32
-    final_activation: tanh
     normalization: minmax
     img_normalize: 'off'
     ps_normalize: 'off'
+

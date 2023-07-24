@@ -1,8 +1,8 @@
 # Train the ML model
 
-from mlp_lhc_tomography.models import Decoder
-from mlp_lhc_tomography.utils import sample_files, fast_tensor_load
-from mlp_lhc_tomography.utils import decoder_files_to_tensors, load_decoder_data
+from models import Decoder
+from utils import sample_files, fast_tensor_load
+from utils import decoder_files_to_tensors, load_decoder_data
 from local_utils import plot_loss
 import time
 import glob

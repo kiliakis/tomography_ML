@@ -1,49 +1,182 @@
-- encoder:
-    activation: relu
-    batch_size: 32
-    dataset%: 1
-    dropout: 0.0
-    epochs: 100
-    img_normalize: 'off'
-    loss: mse
-    loss_weights: [6]
-    lr: 0.001
-    normalization: minmax
-    pooling: null
-    pooling_padding: valid
-    pooling_size: [2, 2]
-    pooling_strides: [1, 1]
-    strides: [2, 2]
-  model_cfg:
-    VrfSPS:
-      conv_padding: same
-      cropping: [7, 7]
-      dense_layers: [1024, 512, 64]
-      filters: [4, 8, 16]
-      kernel_size: [7, 7, 5]
-      use_bias: false
+# - encoder:
+#     activation: relu
+#     batch_size: 32
+#     dataset%: 1
+#     dropout: 0.0
+#     epochs: 100
+#     img_normalize: 'off'
+#     loss: mse
+#     loss_weights: [6]
+#     lr: 0.001
+#     normalization: minmax
+#     pooling: null
+#     pooling_padding: valid
+#     pooling_size: [2, 2]
+#     pooling_strides: [1, 1]
+#     strides: [2, 2]
+#   model_cfg:
+#     VrfSPS:
+#       conv_padding: same
+#       cropping: [7, 7]
+#       dense_layers: [1024, 512, 64]
+#       filters: [4, 8, 16]
+#       kernel_size: [7, 7, 5]
+#       use_bias: false
 
 - encoder:
-    activation: relu
-    batch_size: 32
+    epochs: 200
     dataset%: 1
-    dropout: 0.0
-    epochs: 100
-    img_normalize: 'off'
-    loss: mse
-    loss_weights: [6]
-    lr: 0.001
+    cropping: 12
+    patch_size: [8, 8]
+    projection_dim: 8
+    transformer_layers: 4
+    num_heads: 12
+    activation: relu
+    transformer_units: [256, 16]
+    mlp_head_units: [256]
+    dropout_attention: 0.
+    dropout_mlp: 0.0
+    dropout_representation: 0.0
+    dropout_final: 0.0
+    learning_rate: 0.001
+    batch_size: 32
+    loss: 'mse'
+    use_bias: false
     normalization: minmax
-    pooling: null
-    pooling_padding: valid
-    pooling_size: [2, 2]
-    pooling_strides: [1, 1]
-    strides: [2, 2]
+    img_normalize: 'off'
+    ps_normalize: 'off'
+    final_activation: linear
+    optimizer: adam
   model_cfg:
     VrfSPS:
-      conv_padding: same
-      cropping: [7, 7]
-      dense_layers: [1024, 256, 64]
-      filters: [8, 32]
-      kernel_size: [13, 9]
-      use_bias: false
+      transformer_units: [1024, 64, 8]
+      transformer_layers: 4
+      mlp_head_units: [1024, 64, 8]
+      num_heads: 20
+
+
+- encoder:
+    epochs: 200
+    dataset%: 1
+    cropping: 12
+    patch_size: [8, 8]
+    projection_dim: 12
+    transformer_layers: 4
+    num_heads: 12
+    activation: relu
+    transformer_units: [256, 16]
+    mlp_head_units: [256]
+    dropout_attention: 0.
+    dropout_mlp: 0.0
+    dropout_representation: 0.0
+    dropout_final: 0.0
+    learning_rate: 0.001
+    batch_size: 32
+    loss: 'mse'
+    use_bias: false
+    normalization: minmax
+    img_normalize: 'off'
+    ps_normalize: 'off'
+    final_activation: linear
+    optimizer: adam
+  model_cfg:
+    VrfSPS:
+      transformer_units: [1024, 64, 12]
+      transformer_layers: 4
+      mlp_head_units: [1024, 64, 12]
+      num_heads: 20
+
+- encoder:
+    epochs: 200
+    dataset%: 1
+    cropping: 12
+    patch_size: [8, 8]
+    projection_dim: 16
+    transformer_layers: 4
+    num_heads: 12
+    activation: relu
+    transformer_units: [256, 16]
+    mlp_head_units: [256]
+    dropout_attention: 0.
+    dropout_mlp: 0.0
+    dropout_representation: 0.0
+    dropout_final: 0.0
+    learning_rate: 0.001
+    batch_size: 32
+    loss: 'mse'
+    use_bias: false
+    normalization: minmax
+    img_normalize: 'off'
+    ps_normalize: 'off'
+    final_activation: linear
+    optimizer: adam
+  model_cfg:
+    VrfSPS:
+      transformer_units: [1024, 64, 16]
+      transformer_layers: 4
+      mlp_head_units: [1024, 64, 16]
+      num_heads: 20
+
+
+- encoder:
+    epochs: 200
+    dataset%: 1
+    cropping: 12
+    patch_size: [8, 8]
+    projection_dim: 20
+    transformer_layers: 4
+    num_heads: 12
+    activation: relu
+    transformer_units: [256, 16]
+    mlp_head_units: [256]
+    dropout_attention: 0.
+    dropout_mlp: 0.0
+    dropout_representation: 0.0
+    dropout_final: 0.0
+    learning_rate: 0.001
+    batch_size: 32
+    loss: 'mse'
+    use_bias: false
+    normalization: minmax
+    img_normalize: 'off'
+    ps_normalize: 'off'
+    final_activation: linear
+    optimizer: adam
+  model_cfg:
+    VrfSPS:
+      transformer_units: [1024, 256, 20]
+      transformer_layers: 4
+      mlp_head_units: [1024, 64, 20]
+      num_heads: 20
+
+
+- encoder:
+    epochs: 200
+    dataset%: 1
+    cropping: 12
+    patch_size: [8, 8]
+    projection_dim: 24
+    transformer_layers: 4
+    num_heads: 12
+    activation: relu
+    transformer_units: [256, 16]
+    mlp_head_units: [256]
+    dropout_attention: 0.
+    dropout_mlp: 0.0
+    dropout_representation: 0.0
+    dropout_final: 0.0
+    learning_rate: 0.001
+    batch_size: 32
+    loss: 'mse'
+    use_bias: false
+    normalization: minmax
+    img_normalize: 'off'
+    ps_normalize: 'off'
+    final_activation: linear
+    optimizer: adam
+  model_cfg:
+    VrfSPS:
+      transformer_units: [1024, 256, 24]
+      transformer_layers: 4
+      mlp_head_units: [1024, 64, 24]
+      num_heads: 20

@@ -1,9 +1,9 @@
 # Train the ML model
 
-from mlp_lhc_tomography.utils import sample_files
-from local_models import Tomoscope
-from local_utils import plot_loss, tomoscope_files_to_tensors, load_tomoscope_data
-from local_utils import fast_tensor_load_encdec
+from utils import sample_files
+from models import Tomoscope
+from utils import plot_loss, tomoscope_files_to_tensors, load_tomoscope_data
+from utils import fast_tensor_load_encdec
 import time
 import shutil
 import tensorflow as tf
@@ -158,6 +158,9 @@ if __name__ == '__main__':
             x_valid, turn_valid, latent_valid, y_valid = fast_tensor_load_encdec(
                 VALIDATION_PATH, train_cfg['dataset%'])
             print('Number of Validation files: ', len(y_valid))
+
+            y_train = y_train[:, :, :, :train_cfg['output_turns']]
+            y_valid = y_valid[:, :, :, :train_cfg['output_turns']]
 
         elif DATA_LOAD_METHOD=='DATASET':
             exit('DATASET method not supported')
