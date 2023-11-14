@@ -84,30 +84,37 @@ def visualize_weights(timestamp, model_filename, prefix=''):
         plt.close()
 
 
-def plot_multi_loss(lines, title='', figname=None, subplots=False):
-    fig = plt.figure()
+def plot_multi_loss(lines, title='', figname=None):
+    nrows = len(lines)//2
+    fig, axes = plt.subplots(nrows=nrows, ncols=1)
     fig.suptitle(title)
-    # plt.title(title)
-    subplots = {}
-
+    line_to_ax = {}
+    i = 0
     for line in lines.keys():
+        key = line.lower().replace('_val', '')
+        if key not in line_to_ax:
+            line_to_ax[key] = axes[i]
+            i += 1
+        ax = line_to_ax[key]
         if 'val' in line.lower():
             marker = 'x'
         else:
             marker = '.'
-        ax = plt.add_subplot()
+        plt.sca(ax)
         plt.semilogy(lines[line], marker=marker, label=line)
-    plt.xlabel('Epochs')
-    plt.ylabel('Loss')
-    plt.legend(ncol=2)
-    plt.tight_layout()
+
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss')
+        plt.legend(ncol=2)
+        plt.tight_layout()
+
     if figname:
         plt.savefig(figname, dpi=300)
         plt.close()
 
 
 def plot_loss(lines, title='', figname=None):
-    fig = plt.figure()
+    plt.figure()
     plt.title(title)
     for line in lines.keys():
         if 'val' in line.lower():
