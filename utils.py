@@ -8,6 +8,49 @@ import re
 import glob
 from scipy import signal
 from scipy.interpolate import interp1d
+from tensorflow.keras.models import load_model
+
+
+def plot_sample(x_valid, samples, autoenc, figname=None):
+
+    ncols = len(samples)
+    # Get nrows * nrows random images
+    # sample = np.random.choice(np.arange(len(x_train)),
+    #                         size=ncols, replace=False)
+
+    samples_X = tf.gather(x_valid, samples)
+    pred_samples_X = autoenc.predict(samples_X)
+    # samples_y = tf.gather(y_train, sample)
+
+    # Create 3x3 grid of figures
+    fig, axes = plt.subplots(nrows=2, ncols=ncols, figsize=(14, 7))
+    # axes = np.ravel(axes)
+    for i in range(ncols):
+        sample_X = samples_X[i, 14:-14, 14:-14].numpy()
+        pred_sample_X = pred_samples_X[i, 14:-14, 14:-14].numpy()
+        ax = axes[0, i]
+        ax.set_xticks([])
+        ax.set_yticks([])
+        # show the image
+        ax.imshow(sample_X, cmap='jet')
+        # Set the label
+        ax.set_title(f'Real')
+
+        ax = axes[1, i]
+        ax.set_xticks([])
+        ax.set_yticks([])
+        # show the image
+        ax.imshow(pred_sample_X, cmap='jet')
+        # Set the label
+        ax.set_title(
+            f'Pred, MAE: {np.mean(np.abs(sample_X - pred_sample_X)):.2e}')
+
+    if figname is not None:
+        plt.savefig(figname, dpi=300)
+    else:
+        plt.show()
+    plt.close()
+
 
 def get_best_model_timestamp(path, model='enc'):
     from sort_trial_summaries import extract_trials
@@ -17,8 +60,54 @@ def get_best_model_timestamp(path, model='enc'):
             return row[header.index('date')]
 
 
+def visualize_weights(timestamp, model_filename, prefix=''):
+    trial_dir = os.path.join('./trials/', timestamp)
+    weights_dir = os.path.join(trial_dir, 'weights')
+    plots_dir = os.path.join(trial_dir, 'plots')
+    model = load_model(
+        os.path.join(weights_dir, model_filename))
+
+    weights_per_layer = {}
+    for layer in model.layers:
+        if len(layer.get_weights()) > 0:
+            # [0] for weights, [1] for biases
+            weights_per_layer[layer.name] = layer.get_weights()[0]
+
+    for layer_name, weights in weights_per_layer.items():
+        plt.figure()
+        plt.hist(weights.flatten(), bins=50, range=(-0.3, 0.3))
+        plt.title(f'Weight Distribution for layer {layer_name}')
+        plt.xlabel('Weight Value, Total weights = {}'.format(weights.size))
+        plt.ylabel('Frequency')
+        # plt.show()
+        plt.savefig(os.path.join(plots_dir, f'weights_{prefix}_{layer_name}.jpg'), dpi=400)
+        plt.close()
+
+
+def plot_multi_loss(lines, title='', figname=None, subplots=False):
+    fig = plt.figure()
+    fig.suptitle(title)
+    # plt.title(title)
+    subplots = {}
+
+    for line in lines.keys():
+        if 'val' in line.lower():
+            marker = 'x'
+        else:
+            marker = '.'
+        ax = plt.add_subplot()
+        plt.semilogy(lines[line], marker=marker, label=line)
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend(ncol=2)
+    plt.tight_layout()
+    if figname:
+        plt.savefig(figname, dpi=300)
+        plt.close()
+
+
 def plot_loss(lines, title='', figname=None):
-    plt.figure()
+    fig = plt.figure()
     plt.title(title)
     for line in lines.keys():
         if 'val' in line.lower():
@@ -33,6 +122,19 @@ def plot_loss(lines, title='', figname=None):
     if figname:
         plt.savefig(figname, dpi=300)
         plt.close()
+
+def get_model_size(model):
+    # Count the total parameters
+    total_parameters = model.count_params()
+    
+    # Assuming 32-bit floats (4 bytes) per parameter
+    total_bytes = total_parameters * 4
+    
+    # Convert bytes to megabytes
+    total_megabytes = total_bytes / (1024 * 1024)
+    
+    return total_megabytes
+
 
 def normalizeIMG(img, maxPixel=1):
     return (img / (maxPixel/2)) - 1
@@ -135,78 +237,90 @@ def extract_data_Fromfolder(fn, simulations_dir, IMG_OUTPUT_SIZE, zeropad,
         pattern_string, fn).groupdict().items()}
     E_img = np.zeros((IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE))
     T_img = np.zeros((IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE))
+
     with hp.File(os.path.join(os.path.join(simulations_dir, fn), 'saved_result.hdf5'), 'r') as sf:
         BunchProfiles = np.array(sf['bunchProfiles'])
 
-        fig = plt.figure(1)
-        offset = 1000
-        for turn in np.arange(0, BunchProfiles.shape[1], 5):
-            plt.plot(time_scale, turn*offset + BunchProfiles[:, turn])
-        plt.xlabel('Time [s]')
-        plt.yticks([], [])
-        plt.ylabel('Time profiles')
-        plt.tight_layout()
-        # plt.show()
-        plt.savefig('plots/input_mountain_range.jpg', dpi=400)
-        plt.close()
+        # This is equal to sf['columns'][0][3]
+        n_macroparticles = BunchProfiles[:, 0].sum()
+        
+        # fig = plt.figure(1)
+        # offset = 1000
+        # for turn in np.arange(0, BunchProfiles.shape[1], 5):
+        #     plt.plot(time_scale, turn*offset + BunchProfiles[:, turn])
+        # plt.xlabel('Time [s]')
+        # plt.yticks([], [])
+        # plt.ylabel('Time profiles')
+        # plt.tight_layout()
+        # # plt.show()
+        # plt.savefig('plots/input_mountain_range.jpg', dpi=400)
+        # plt.close()
 
-        fig = plt.figure(2)
-        plt.imshow(BunchProfiles[:, :300].T, cmap='jet', aspect='auto', origin='lower')
-        plt.xlabel('Bins')
-        plt.ylabel('Turns')
-        plt.tight_layout()
-        # plt.show()
-        plt.savefig('plots/input_waterfall.jpg', dpi=400)
-        plt.close()
+        # fig = plt.figure(2)
+        # plt.imshow(BunchProfiles[:, :300].T, cmap='jet', aspect='auto', origin='lower')
+        # plt.xlabel('Bins')
+        # plt.ylabel('Turns')
+        # plt.tight_layout()
+        # # plt.show()
+        # plt.savefig('plots/input_waterfall.jpg', dpi=400)
+        # plt.close()
 
         # plt.plot(time_scale, BunchProfiles[:, 0], label='before_tf')
         if (time_scale is not None) and (freq_array is not None) and (TF_array is not None):
             _, BunchProfiles = bunchProfile_TFconvolve(BunchProfiles, time_scale,
                                                        freq_array, TF_array)
             
-            fig = plt.figure(3)
-            offset = 1000
-            for turn in np.arange(0, BunchProfiles.shape[1], 5):
-                plt.plot(time_scale, turn*offset + BunchProfiles[:, turn])
-            plt.xlabel('Time [s]')
-            plt.yticks([], [])
-            plt.ylabel('Time profiles')
-            plt.tight_layout()
-            # plt.show()
-            plt.savefig('plots/input_mountain_range_with_tf.jpg', dpi=400)
-            plt.close()
+            # fig = plt.figure(3)
+            # offset = 1000
+            # for turn in np.arange(0, BunchProfiles.shape[1], 5):
+            #     plt.plot(time_scale, turn*offset + BunchProfiles[:, turn])
+            # plt.xlabel('Time [s]')
+            # plt.yticks([], [])
+            # plt.ylabel('Time profiles')
+            # plt.tight_layout()
+            # # plt.show()
+            # plt.savefig('plots/input_mountain_range_with_tf.jpg', dpi=400)
+            # plt.close()
 
 
-            fig = plt.figure(4)
-            plt.imshow(BunchProfiles[:, :300].T, cmap='jet', aspect='auto', origin='lower')
-            plt.xlabel('Time')
-            plt.ylabel('Turns')
-            plt.tight_layout()
-            # plt.show()
-            plt.savefig('plots/input_waterfall_with_tf.jpg', dpi=400)
-            plt.close()
+            # fig = plt.figure(4)
+            # plt.imshow(BunchProfiles[:, :300].T, cmap='jet', aspect='auto', origin='lower')
+            # plt.xlabel('Time')
+            # plt.ylabel('Turns')
+            # plt.tight_layout()
+            # # plt.show()
+            # plt.savefig('plots/input_waterfall_with_tf.jpg', dpi=400)
+            # plt.close()
             # plt.figure(2)
             # plt.plot(freq_array, np.abs(TF_array))
             # plt.figure(5)
             # plt.plot(time_scale, BunchProfiles[:, 0], label='after_tf')
 
-        BunchProfiles = BunchProfiles / sf['columns'][0][3]*paramsDict['int']
+        # BunchProfiles = BunchProfiles / sf['columns'][0][3]*paramsDict['int']
+        BunchProfiles = BunchProfiles / n_macroparticles
 
         # plt.legend()
         # plt.show()
         # plt.savefig('plots/profile_before_after_tf.jpg', dpi=400)
         # plt.close()
 
-        EnergyProfiles = np.array(
-            sf['energyProfiles'])/sf['columns'][0][3]*paramsDict['int']
+        # EnergyProfiles = np.array(sf['energyProfiles'])/n_macroparticles*paramsDict['int']
+        EnergyProfiles = np.array(sf['energyProfiles']) / n_macroparticles
+
         phaseSpace_density_array = np.array(sf['phaseSpace_density_array'])
-        PS_imgs = np.zeros((IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE,
-                           phaseSpace_density_array.shape[1]))
-        for i in range(phaseSpace_density_array.shape[1]):
-            turn_PS = np.transpose(np.reshape(
-                phaseSpace_density_array[:, i], (99, 99)))/sf['columns'][0][3]*paramsDict['int']
-            PS_imgs[:, :, i] = np.pad(
-                turn_PS, ((zeropad, zeropad+1), (zeropad, zeropad+1)))
+        # PS_imgs = np.zeros((IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE,
+        #                    phaseSpace_density_array.shape[1]))
+        
+        # This will transform from 99801x501 to 128x128x501
+        PS_imgs = np.pad(phaseSpace_density_array.reshape((99, 99, -1)).transpose(1,0,2)/n_macroparticles, 
+                         ((zeropad, zeropad+1), (zeropad, zeropad+1), (0,0)))
+        # for i in range(phaseSpace_density_array.shape[1]):
+        #     # turn_PS = np.transpose(np.reshape(
+        #     #     phaseSpace_density_array[:, i], (99, 99)))/n_macroparticles*paramsDict['int']
+        #     turn_PS = np.transpose(np.reshape(
+        #         phaseSpace_density_array[:, i], (99, 99)))/n_macroparticles
+        #     PS_imgs[:, :, i] = np.pad(
+        #         turn_PS, ((zeropad, zeropad+1), (zeropad, zeropad+1)))
         sel_turns = np.arange(
             start_turn, skipturns*(IMG_OUTPUT_SIZE-2*zeropad), skipturns).astype(np.int32)
         PS_img_dec = PS_imgs[:, :, sel_turns]
@@ -215,14 +329,14 @@ def extract_data_Fromfolder(fn, simulations_dir, IMG_OUTPUT_SIZE, zeropad,
         T_img = np.pad(BunchProfiles[:, sel_turns], ((
             zeropad, zeropad), (zeropad, zeropad)), 'constant', constant_values=(0, 0))
         
-        fig = plt.figure(5)
-        plt.imshow(T_img.T, cmap='jet', aspect='auto', origin='lower')
-        plt.xlabel('Time')
-        plt.ylabel('Turns')
-        plt.tight_layout()
-        # plt.show()
-        plt.savefig('plots/input_waterfall_with_tf_formatted.jpg', dpi=400)
-        plt.close()
+        # fig = plt.figure(5)
+        # plt.imshow(T_img.T, cmap='jet', aspect='auto', origin='lower')
+        # plt.xlabel('Time')
+        # plt.ylabel('Turns')
+        # plt.tight_layout()
+        # # plt.show()
+        # plt.savefig('plots/input_waterfall_with_tf_formatted.jpg', dpi=400)
+        # plt.close()
     return paramsDict, PS_imgs, sel_turns, E_img, T_img, PS_img_dec
 
 
@@ -256,7 +370,7 @@ def sample_files(path, percent, keep_every=1):
     return ret_files
 
 
-def fast_tensor_load(path, percent=1.0, max_files=-1):
+def fast_tensor_load(path, percent=1.0, max_files=-1, dtype='float32'):
     x_train, y_train = [], []
     all_files = glob.glob(path)
     if max_files > 0:
@@ -274,8 +388,8 @@ def fast_tensor_load(path, percent=1.0, max_files=-1):
                 points, int(points * percent), replace=False)
             x, y = x[keep_points], y[keep_points]
         # append to list
-        x_train.append(tf.convert_to_tensor(x))
-        y_train.append(tf.convert_to_tensor(y))
+        x_train.append(tf.convert_to_tensor(x, dtype=dtype))
+        y_train.append(tf.convert_to_tensor(y, dtype=dtype))
     # make the final tensor
     x_train = tf.concat(x_train, axis=0)
     y_train = tf.concat(y_train, axis=0)

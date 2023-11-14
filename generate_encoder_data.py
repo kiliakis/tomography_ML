@@ -17,7 +17,8 @@ skipturns = 3
 eos = '/eos/user/k/kiliakis/'
 simulations_dir = eos + '/tomo_data/results_tomo_02-12-22'
 # save_dir = eos + '/tomo_data/datasets_encoder_TF_24-03-23'
-save_dir = eos + '/tomo_data/temp'
+# save_dir = eos + '/tomo_data/temp'
+save_dir = eos + '/tomo_data/datasets_encoder_TF_08-11-23'
 
 
 parser = argparse.ArgumentParser(
@@ -40,11 +41,14 @@ parser.add_argument('-train', '--train-ratio', type=float, default=0.85,
 
 
 # E_normFactor = 23231043000.0
-E_normFactor = 25000000000.0
+# E_normFactor = 25000000000.0
+E_normFactor = 1
 # B_normFactor = 768246000.0
-B_normFactor = 800000000.0
+# B_normFactor = 800000000.0
+B_normFactor = 1
 # T_normFactor = 25860460000.0
-T_normFactor = 28000000000.0
+# T_normFactor = 28000000000.0
+T_normFactor = 1
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -134,6 +138,8 @@ if __name__ == '__main__':
             # E_normFactor = np.max(E_img)
             # T_normFactor = np.max(T_img)
             # B_normFactor = np.max(PS_img_dec.flatten())
+
+            # remove the intensity factor
 
             E_maxs.append(E_normFactor)
             T_maxs.append(T_normFactor)

@@ -4,9 +4,9 @@ from utils import sample_files, encoder_files_to_tensors
 from utils import decoder_files_to_tensors, encdec_files_to_tensors
 from utils import tomoscope_files_to_tensors
 
-# data_dir = './tomo_data/datasets_encoder_TF_24-03-23'
+data_dir = './tomo_data/datasets_encoder_TF_08-11-23'
 # data_dir = './tomo_data/datasets_decoder_TF_24-03-23'
-data_dir = './tomo_data/datasets_tomoscope_TF_24-03-23'
+# data_dir = './tomo_data/datasets_tomoscope_TF_24-03-23'
 
 percent = 1
 normalization = 'minmax'
@@ -14,8 +14,8 @@ img_normalize = 'off'
 ps_normalize = 'off'
 file_chunk = 5000
 # model_type = 'decoder' # Can be encoder or decoder
-# model_type = 'encdec'  # Can be encoder or decoder
-model_type = 'tomoscope'  # Can be encoder, decoder or tomoscope
+model_type = 'encoder'  # Can be encoder or decoder
+# model_type = 'tomoscope'  # Can be encoder, decoder or tomoscope
 num_turns = 10
 
 if __name__ == '__main__':
