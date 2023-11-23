@@ -50,7 +50,7 @@ class BaseModel(keras.Model):
 
 
 # model definition
-class AutoEncoderTranspose(BaseModel):
+class AutoEncoderSkipAhead(BaseModel):
     # Pooling can be None, or 'Average' or 'Max'
     def __init__(self, output_name='autoencoder',
                  input_shape=(128, 128, 1), dense_layers=[7],
@@ -59,8 +59,6 @@ class AutoEncoderTranspose(BaseModel):
                  filters=[8, 16, 32],  kernel_size=3, conv_padding='same',
                  strides=[2, 2], activation='relu',
                  final_activation='linear', final_kernel_size=3,
-                 pooling=None, pooling_size=[2, 2],
-                 pooling_strides=[1, 1], pooling_padding='valid',
                  dropout=0.0, learning_rate=0.001, loss='mse',
                  metrics=[], use_bias=True, conv_batchnorm=False,
                  dense_batchnorm=False, **kwargs):
@@ -81,11 +79,11 @@ class AutoEncoderTranspose(BaseModel):
         # set the input size
         inputs = keras.Input(shape=input_shape, name='Input')
 
-        # this is the autoencoder case
         # crop the edges
-        cropped = keras.layers.Cropping2D(
-            cropping=cropping, name='Crop')(inputs)
+        cropped = keras.layers.Cropping2D(cropping=cropping, name='Crop')(inputs)
         x = cropped
+
+        skip_layers = []
 
         # For evey Convolutional layer
         for i, f in enumerate(filters):
@@ -102,15 +100,8 @@ class AutoEncoderTranspose(BaseModel):
             # Apply the activation function
             x = keras.activations.get(activation)(x)
 
-            # Optional pooling after the convolution
-            if pooling == 'Max':
-                x = keras.layers.MaxPooling2D(
-                    pool_size=pooling_size, strides=pooling_strides,
-                    padding=pooling_padding, name=f'MaxPooling_{i+1}')(x)
-            elif pooling == 'Average':
-                x = keras.layers.AveragePooling2D(
-                    pool_size=pooling_size, strides=pooling_strides,
-                    padding=pooling_padding, name=f'AveragePooling_{i+1}')(x)
+            # append to skip layers
+            skip_layers.append(x)
 
         # we have reached the latent space
         last_shape = x.shape[1:]
@@ -156,9 +147,311 @@ class AutoEncoderTranspose(BaseModel):
         # Now with transpose convolutions we go back to the original size
 
         for i, f in enumerate(filters[::-1]):
+            x = keras.layers.Concatenate(name=f'Concatenate_{i+1}')([x, skip_layers[-i-1]])
             x = keras.layers.Conv2DTranspose(
-                filters=f, kernel_size=kernel_size[-i -
-                                                   1], strides=strides[-i-1],
+                filters=f, kernel_size=kernel_size[-i-1],
+                strides=strides[-i-1],
+                use_bias=use_bias, padding=conv_padding,
+                name=f'CNN_Transpose_{i+1}')(x)
+
+        # final convolution to get the right number of channels
+        x = keras.layers.Conv2DTranspose(filters=1, kernel_size=final_kernel_size,
+                                         strides=1, use_bias=use_bias, padding='same',
+                                         name=f'CNN_Transpose_Final')(x)
+
+        x = keras.layers.Activation(activation=final_activation,
+                                    name='final_activation')(x)
+        before_padding = x
+        # Add zero padding
+        padding = calculate_padding(
+            input_shape=before_padding.shape[1:], target_shape=input_shape)
+        outputs = keras.layers.ZeroPadding2D(
+            padding=padding, name='Padding')(x)
+
+        model = keras.Model(inputs=inputs, outputs=outputs, name=output_name)
+
+        # assert model.layers[-1].output_shape[1:] == input_shape
+
+        # Also initialize the optimizer and compile the model
+        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+        model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+
+        self.model = model
+
+# model definition
+
+
+# Sampling function
+def sampling(args):
+    z_mean, z_log_var = args
+    batch = K.shape(z_mean)[0]
+    dim = K.int_shape(z_mean)[1]
+    epsilon = K.random_normal(shape=(batch, dim))
+    return z_mean + K.exp(0.5 * z_log_var) * epsilon
+
+
+class VariationalAutoEncoder(BaseModel):
+    # Pooling can be None, or 'Average' or 'Max'
+    def __init__(self, output_name='vae',
+                 input_shape=(128, 128, 1), dense_layers=[7],
+                 decoder_dense_layers=[], latent_dim=2,
+                 cropping=[[0, 0], [0, 0]],
+                 filters=[8, 16, 32],  kernel_size=3, conv_padding='same',
+                 strides=[2, 2], activation='relu',
+                 final_activation='sigmoid', final_kernel_size=3,
+                 dropout=0.0, learning_rate=0.001, loss='mse',
+                 metrics=[], use_bias=True, conv_batchnorm=False,
+                 dense_batchnorm=False, **kwargs):
+        super().__init__()
+
+        self.output_name = output_name
+        self.inputShape = input_shape
+        # the kernel_size can be a single int or a list of ints
+        if isinstance(kernel_size, int):
+            kernel_size = [kernel_size] * len(filters)
+        assert len(kernel_size) == len(filters)
+
+        # the strides can be a list of two ints, or a list of two-int lists
+        if isinstance(strides[0], int):
+            strides = [strides for _ in filters]
+        assert len(strides) == len(filters)
+
+        # set the input size
+        inputs = keras.Input(shape=input_shape, name='Input')
+
+        # crop the edges
+        cropped = keras.layers.Cropping2D(
+            cropping=cropping, name='Crop')(inputs)
+        x = cropped
+
+        # For evey Convolutional layer
+        for i, f in enumerate(filters):
+            # Add the Convolution
+            x = keras.layers.Conv2D(
+                filters=f, kernel_size=kernel_size[i], strides=strides[i],
+                use_bias=use_bias, padding=conv_padding,
+                name=f'CNN_{i+1}')(x)
+
+            # Apply batchnormalization
+            if conv_batchnorm:
+                x = tf.keras.layers.BatchNormalization()(x)
+
+            # Apply the activation function
+            x = keras.activations.get(activation)(x)
+
+        # we have reached the latent space
+        last_shape = x.shape[1:]
+        x = keras.layers.Flatten(name='Flatten')(x)
+        flat_shape = x.shape[1:]
+        # Now we add the dense layers
+        for i, units in enumerate(dense_layers):
+            # Add the layer
+            x = keras.layers.Dense(units=units, activation=activation,
+                                   name=f'encoder_dense_{i+1}')(x)
+
+            # Apply batchnormalization
+            if dense_batchnorm:
+                x = tf.keras.layers.BatchNormalization()(x)
+
+            # Add dropout optionally
+            if dropout > 0 and dropout < 1:
+                x = keras.layers.Dropout(dropout, name=f'dropout_{i+1}')(x)
+
+        z_mean = keras.layers.Dense(units=latent_dim)(x)
+        z_log_var = keras.layers.Dense(units=latent_dim)(x)
+        
+        z = keras.layers.Lambda(sampling, name='LatentSpace')([z_mean, z_log_var])
+
+        # a dummy layer just to name it latent space
+        # x = keras.layers.Lambda(lambda x: x, name='LatentSpace')(x)
+        # self.encoder = keras.Model(inputs=inputs, outputs=z, name='encoder')
+
+        # Decoder network
+
+        decoder_inputs = keras.layers.Input(shape=(latent_dim,), name='decoder_input')
+        # Now we add the decoder dense layers
+        for i, units in enumerate(decoder_dense_layers):
+            # Add the layer
+            x = keras.layers.Dense(units=units, activation=activation,
+                                   name=f'decoder_dense_{i+1}')(decoder_inputs)
+
+            # Apply batchnormalization
+            if dense_batchnorm:
+                x = tf.keras.layers.BatchNormalization()(x)
+
+            # Add dropout optionally
+            if dropout > 0 and dropout < 1:
+                x = keras.layers.Dropout(dropout, name=f'dropout_{i+1}')(x)
+
+        # Now reshape back to last_shape
+        x = keras.layers.Dense(units=np.prod(flat_shape), activation=activation,
+                               name='decoder_dense_final')(x)
+
+        x = keras.layers.Reshape(target_shape=last_shape, name='Reshape')(x)
+        # Now with transpose convolutions we go back to the original size
+
+        for i, f in enumerate(filters[::-1]):
+            x = keras.layers.Conv2DTranspose(
+                filters=f, kernel_size=kernel_size[-i-1],
+                strides=strides[-i-1],
+                use_bias=use_bias, padding=conv_padding,
+                name=f'CNN_Transpose_{i+1}')(x)
+
+        # final convolution to get the right number of channels
+        x = keras.layers.Conv2DTranspose(filters=1, kernel_size=final_kernel_size,
+                                         strides=1, use_bias=use_bias, padding='same',
+                                         name=f'CNN_Transpose_Final')(x)
+
+        x = keras.layers.Activation(activation=final_activation,
+                                    name='final_activation')(x)
+
+        before_padding = x
+        # Add zero padding
+        padding = calculate_padding(
+            input_shape=before_padding.shape[1:], target_shape=input_shape)
+        outputs = keras.layers.ZeroPadding2D(padding=padding, name='Padding')(x)
+
+        self.encoder = keras.Model(inputs=inputs, outputs=[
+                                   z_mean, z_log_var, z], name='encoder')
+        self.decoder = keras.Model(inputs=decoder_inputs, outputs=outputs, name='decoder')
+
+        outputs = self.decoder(self.encoder(inputs)[2])
+        model = keras.Model(inputs=inputs, outputs=outputs, name=output_name)
+
+        # Loss function
+        # reconstruction_loss = tf.reduce_mean(tf.reduce_sum(tf.keras.losses.binary_crossentropy(inputs, outputs), axis=(1, 2)))
+        reconstruction_loss = tf.reduce_mean(tf.abs(inputs-outputs))
+
+        kl_loss = -0.5 * tf.reduce_mean(tf.reduce_sum(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1))
+        vae_loss = reconstruction_loss + kl_loss
+
+        # model = keras.Model(inputs=inputs, outputs=outputs, name=output_name)
+
+        # assert model.layers[-1].output_shape[1:] == input_shape
+
+        # Also initialize the optimizer and compile the model
+        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+        model.add_loss(vae_loss)
+        model.compile(optimizer=optimizer, metrics=metrics)
+
+        self.model = model
+
+
+
+# model definition
+class AutoEncoderTranspose(BaseModel):
+    # Pooling can be None, or 'Average' or 'Max'
+    def __init__(self, output_name='autoencoder',
+                 input_shape=(128, 128, 1), dense_layers=[7],
+                 decoder_dense_layers=[],
+                 cropping=[[0, 0], [0, 0]],
+                 filters=[8, 16, 32],  kernel_size=3, conv_padding='same',
+                 strides=[2, 2], 
+                 enc_activation='relu',
+                 dec_activation='relu',
+                 conv_activation='relu',
+                 alpha=0.1,
+                 final_activation='linear', final_kernel_size=3,
+                 pooling=None, pooling_size=[2, 2],
+                 pooling_strides=[1, 1], pooling_padding='valid',
+                 dropout=0.0, learning_rate=0.001, loss='mse',
+                 metrics=[], use_bias=True, conv_batchnorm=False,
+                 dense_batchnorm=False, **kwargs):
+        super().__init__()
+
+        self.output_name = output_name
+        self.inputShape = input_shape
+        # the kernel_size can be a single int or a list of ints
+        if isinstance(kernel_size, int):
+            kernel_size = [kernel_size] * len(filters)
+        assert len(kernel_size) == len(filters)
+
+        # the strides can be a list of two ints, or a list of two-int lists
+        if isinstance(strides[0], int):
+            strides = [strides for _ in filters]
+        assert len(strides) == len(filters)
+
+        # set the input size
+        inputs = keras.Input(shape=input_shape, name='Input')
+
+        # this is the autoencoder case
+        # crop the edges
+        cropped = keras.layers.Cropping2D(
+            cropping=cropping, name='Crop')(inputs)
+        x = cropped
+
+        # For evey Convolutional layer
+        for i, f in enumerate(filters):
+            # Add the Convolution
+            x = keras.layers.Conv2D(
+                filters=f, kernel_size=kernel_size[i], strides=strides[i],
+                use_bias=use_bias, padding=conv_padding,
+                name=f'CNN_{i+1}')(x)
+
+            # Apply batchnormalization
+            if conv_batchnorm:
+                x = tf.keras.layers.BatchNormalization()(x)
+
+            # Apply the activation function
+            x = keras.activations.get(conv_activation)(x)
+
+            # Optional pooling after the convolution
+            if pooling == 'Max':
+                x = keras.layers.MaxPooling2D(
+                    pool_size=pooling_size, strides=pooling_strides,
+                    padding=pooling_padding, name=f'MaxPooling_{i+1}')(x)
+            elif pooling == 'Average':
+                x = keras.layers.AveragePooling2D(
+                    pool_size=pooling_size, strides=pooling_strides,
+                    padding=pooling_padding, name=f'AveragePooling_{i+1}')(x)
+
+        # we have reached the latent space
+        last_shape = x.shape[1:]
+        x = keras.layers.Flatten(name='Flatten')(x)
+        flat_shape = x.shape[1:]
+        # Now we add the dense layers
+        for i, units in enumerate(dense_layers):
+            # Add the layer
+            x = keras.layers.Dense(units=units, activation=enc_activation,
+                                   name=f'encoder_dense_{i+1}')(x)
+
+            # Apply batchnormalization
+            if dense_batchnorm:
+                x = tf.keras.layers.BatchNormalization()(x)
+
+            # Add dropout optionally
+            if dropout > 0 and dropout < 1:
+                x = keras.layers.Dropout(dropout, name=f'enc_dropout_{i+1}')(x)
+
+        # a dummy layer just to name it latent space
+        x = keras.layers.Lambda(lambda x: x, name='LatentSpace')(x)
+        self.encoder = keras.Model(inputs=inputs, outputs=x, name='encoder')
+
+        # Now we add the decoder dense layers
+        for i, units in enumerate(decoder_dense_layers):
+            # Add the layer
+            x = keras.layers.Dense(units=units, activation=dec_activation,
+                                   name=f'decoder_dense_{i+1}')(x)
+
+            # Apply batchnormalization
+            if dense_batchnorm:
+                x = tf.keras.layers.BatchNormalization()(x)
+
+            # Add dropout optionally
+            if dropout > 0 and dropout < 1:
+                x = keras.layers.Dropout(dropout, name=f'dec_dropout_{i+1}')(x)
+
+        # Now reshape back to last_shape
+        x = keras.layers.Dense(units=np.prod(flat_shape), activation=conv_activation,
+                               name='decoder_dense_final')(x)
+
+        x = keras.layers.Reshape(target_shape=last_shape, name='Reshape')(x)
+        # Now with transpose convolutions we go back to the original size
+
+        for i, f in enumerate(filters[::-1]):
+            x = keras.layers.Conv2DTranspose(
+                filters=f, kernel_size=kernel_size[-i-1],
+                strides=strides[-i-1],
                 use_bias=use_bias, padding=conv_padding,
                 name=f'CNN_Transpose_{i+1}')(x)
 

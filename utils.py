@@ -6,6 +6,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import re
 import glob
+import bisect
 from scipy import signal
 from scipy.interpolate import interp1d
 from tensorflow.keras.models import load_model
@@ -84,9 +85,105 @@ def visualize_weights(timestamp, model_filename, prefix=''):
         plt.close()
 
 
+def plot_feature_extractor_evaluation(latent_pred, latent_true, normalization, figname=None):
+    # unormalized latent space
+    latent_unnorm = unnormalize_params(
+        latent_true[:, 0], latent_true[:, 1], latent_true[:, 2],
+        latent_true[:, 3], latent_true[:, 4], latent_true[:, 5],
+        latent_true[:, 6], normalization=normalization)
+    latent_unnorm = np.array(latent_unnorm).T
+
+    # unormalized predicted latent space
+    latent_pred_unnorm = unnormalize_params(
+        latent_pred[:, 0], latent_pred[:, 1], latent_pred[:, 2],
+        latent_pred[:, 3], latent_pred[:, 4], latent_pred[:, 5],
+        latent_pred[:, 6], normalization=normalization)
+    latent_pred_unnorm = np.array(latent_pred_unnorm).T
+
+    # absolute difference
+    diffs = np.abs(latent_unnorm - latent_pred_unnorm)
+
+    # Encoder, graphical evaluation
+    evaluation_config = {
+        0: {'xlabel': 'Phase Error [deg]',
+            'range': (0, 5),
+            'xticks': np.arange(0, 5.1, 0.5),
+            'desired': 2,
+            'multiplier': 1},
+        1: {'xlabel': 'Energy Error [MeV]',
+            'range': (0, 5),
+            'xticks': np.arange(0, 5.1, 0.5),
+            'desired': 2,
+            'multiplier': 1},
+        2: {'xlabel': 'Bunch Length [ps]',
+            'range': (0, 50),
+            'xticks': np.arange(0, 50.5, 5),
+            'desired': 25,
+            'multiplier': 1e12},
+        3: {'xlabel': 'Bunch Intensity [1e9]',
+            'range': (0, 5),
+            'xticks': np.arange(0, 5.1, 0.5),
+            'desired': 1.5,
+            'multiplier': 1e-9},
+        4: {'xlabel': 'V_rf [MV]',
+            'range': (0, 0.3),
+            'xticks': np.arange(0, 0.31, 0.05),
+            'desired': 0.1,
+            'multiplier': 1},
+        5: {'xlabel': 'mu [a.u.]',
+            'range': (0, 0.6),
+            'xticks': np.arange(0, 0.61, 0.1),
+            'desired': 0.2,
+            'multiplier': 1},
+        6: {'xlabel': 'V_rf SPS [MV]',
+            'range': (0, 0.3),
+            'xticks': np.arange(0, 0.31, 0.05),
+            'desired': 0.1,
+            'multiplier': 1},
+    }
+
+    fig, axes = plt.subplots(ncols=2, nrows=4, sharex=False,
+                            sharey=False, figsize=(8, 8))
+    axes = np.ravel(axes, order='F')
+
+    for idx, ax in enumerate(axes):
+        if idx == 7:
+            break
+        plt.sca(ax)
+        config = evaluation_config[idx]
+        hist, bins, _ = plt.hist(
+            diffs[:, idx]*config['multiplier'], bins=50, range=config['range'], label='samples')
+        cumsum = np.cumsum(hist) / diffs.shape[0]
+        b = bisect.bisect(cumsum, 0.95)
+        if b+1 < len(bins):
+            x = bins[b+1]
+        else:
+            x = bins[-1]
+        plt.axvline(x=x, color='tab:orange',
+                    label=f'95% < {x:.2f}')
+        plt.xticks(config['xticks'])
+        plt.xlabel(config['xlabel'])
+        if idx < 4:
+            plt.ylabel('No. Samples')
+        plt.axvline(x=config['desired'], color='black',
+                    label=f'Desired < {config["desired"]:.1f}')
+        plt.legend(loc='upper right')
+        plt.gca().set_facecolor('0.85')
+
+    # delete last
+    fig.delaxes(axes[-1])
+
+    plt.tight_layout()
+    plt.savefig(figname, dpi=400, bbox_inches='tight')
+    plt.close()
+
+
 def plot_multi_loss(lines, title='', figname=None):
     nrows = len(lines)//2
-    fig, axes = plt.subplots(nrows=nrows, ncols=1)
+    ncols = 2
+    nrows = (nrows+ncols-1) // ncols
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(5*ncols, 3*nrows), sharex=True)
+    axes = np.ravel(axes)
     fig.suptitle(title)
     line_to_ax = {}
     i = 0
@@ -102,7 +199,7 @@ def plot_multi_loss(lines, title='', figname=None):
             marker = '.'
         plt.sca(ax)
         plt.semilogy(lines[line], marker=marker, label=line)
-
+        plt.grid(True)
         plt.xlabel('Epochs')
         plt.ylabel('Loss')
         plt.legend(ncol=2)
