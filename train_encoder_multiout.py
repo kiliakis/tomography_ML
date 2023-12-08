@@ -16,7 +16,7 @@ mpl.use('Agg')
 from models import EncoderSingle, EncoderSingleViT
 from utils import sample_files, load_encoder_data
 from utils import encoder_files_to_tensors, fast_tensor_load
-from utils import plot_loss
+from utils import plot_loss, visualize_weights
 
 parser = argparse.ArgumentParser(description='Train the encoder/ decoder models',
                                  usage='python train_model.py -c config.yml')
@@ -27,14 +27,15 @@ parser.add_argument('-c', '--config', type=str, default=None,
 # Initialize parameters
 # data_dir = './tomo_data/datasets_encoder_02-12-22'
 # data_dir = './tomo_data/datasets_encoder_TF_16-12-22'
-data_dir = './tomo_data/datasets_encoder_TF_24-03-23'
+# data_dir = './tomo_data/datasets_encoder_TF_24-03-23'
+data_dir = './tomo_data/datasets_encoder_TF_08-11-23'
 
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 # Data specific
 IMG_OUTPUT_SIZE = 128
 DATA_LOAD_METHOD='FAST_TENSOR' # it can be TENSOR or DATASET or FAST_TENSOR
-MODEL_TYPE = 'EncoderSingleViT' # it can be EncoderSingle or EncoderSingleViT
+MODEL_TYPE = 'EncoderSingle' # it can be EncoderSingle or EncoderSingleViT
 num_Turns_Case = 1
 var_names = ['phEr', 'enEr', 'bl',
              'inten', 'Vrf', 'mu', 'VrfSPS']
@@ -391,6 +392,9 @@ if __name__ == '__main__':
             total_time = time.time() - start_time
             print(
                 f'\n---- {var_name}: Training complete, epochs: {len(history.history["loss"])}, min loss {np.min(history.history["val_loss"])}, total time {total_time} ----\n')
+    
+            visualize_weights(os.path.join(weights_dir, f'encoder_{var_name}.h5'),
+                              plots_dir, prefix=var_name)
 
 
         # Plot training and validation loss
@@ -438,6 +442,7 @@ if __name__ == '__main__':
         # save config_dict
         with open(os.path.join(trial_dir, 'encoder-summary.yml'), 'w') as configfile:
             yaml.dump(config_dict, configfile, default_flow_style=False)
+
 
     finally:
         if os.path.exists(cache_dir):

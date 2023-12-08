@@ -61,12 +61,8 @@ def get_best_model_timestamp(path, model='enc'):
             return row[header.index('date')]
 
 
-def visualize_weights(timestamp, model_filename, prefix=''):
-    trial_dir = os.path.join('./trials/', timestamp)
-    weights_dir = os.path.join(trial_dir, 'weights')
-    plots_dir = os.path.join(trial_dir, 'plots')
-    model = load_model(
-        os.path.join(weights_dir, model_filename))
+def visualize_weights(model_filename, plots_dir, prefix=''):
+    model = load_model(model_filename)
 
     weights_per_layer = {}
     for layer in model.layers:

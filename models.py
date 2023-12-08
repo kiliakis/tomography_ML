@@ -831,7 +831,7 @@ class EncoderSingle(keras.Model):
                  strides=[2, 2], activation='relu',
                  pooling=None, pooling_size=[2, 2],
                  pooling_strides=[1, 1], pooling_padding='same',
-                 dropout=0.0, learning_rate=0.001, loss='mae',
+                 dropout=0.0, learning_rate=0.001, loss='mse',
                  metrics=[], use_bias=True, batchnorm=False,
                  conv_batchnorm=False, conv_padding='same',
                    **kwargs):
@@ -864,7 +864,7 @@ class EncoderSingle(keras.Model):
                 name=f'{output_name}_CNN_{i+1}')(x)
 
             # Apply batchnormalization
-            if batchnorm:
+            if conv_batchnorm:
                 x = tf.keras.layers.BatchNormalization()(x)
 
             # Apply the activation function
