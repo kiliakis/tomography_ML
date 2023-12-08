@@ -26,7 +26,9 @@ parser.add_argument('-c', '--config', type=str, default=None,
 
 # Initialize parameters
 # data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_encoder_02-12-22'
-data_dir = './tomo_data/datasets_encoder_TF_24-03-23'
+# data_dir = './tomo_data/datasets_encoder_TF_24-03-23'
+data_dir = './tomo_data/datasets_encoder_TF_08-11-23'
+
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 DATA_LOAD_METHOD='FAST_TENSOR' # it can be TENSOR or DATASET or FAST_TENSOR
@@ -38,13 +40,14 @@ var_names = ['phEr', 'enEr', 'bl',
              'inten', 'Vrf', 'mu', 'VrfSPS']
 num_Turns_Case = 1
 
-var_name = 'VrfSPS'
+var_name = 'phEr'
 
 # Train specific
 train_cfg = {
     'epochs': 25,
     'strides': [2, 2],
     'activation': 'relu',
+    'conv_padding': 'same',
     'pooling_size': [2, 2],
     'pooling_strides': [1, 1],
     'pooling_padding': 'valid',
@@ -53,19 +56,40 @@ train_cfg = {
     'lr': 1e-3,
     'dataset%': 0.5,
     'normalization': 'minmax',
-    'loss_weights': [var_names.index(var_name)],
+    'loss_weights': [0, 1, 2, 4]],
     'img_normalize': 'off',
+    'use_bias': False,
     'batch_size': 32
 }
 
 model_cfg = {
-    var_name: {
-        'cropping': [[0, 0], [7, 7]],
+    'phEr': {
+        'cropping': [[0, 0]],
+        'filters': [[8, 16, 32], [4, 8, 64]],
+        'kernel_size': [7, 5, 3],
+        'dense_layers': [[1024, 512, 32], [1024, 256, 32]],
+        'batch_size': [32, 128]
+    },
+    'enEr': {
+        'cropping': [[0, 0], [6, 6]],
+        'filters': [[8, 16, 32], [4, 8, 16]],
+        'kernel_size': [9, 7, 5],
+        'dense_layers': [[1024, 512, 64], [1024, 256, 64]],
+        'batch_size': [32, 128]
+    },
+    'bl': {
+        'cropping': [[0, 0], [6, 6]],
         'filters': [[8, 16, 32], [16, 32, 64]],
-        'kernel_size': [[9, 7, 5], [7, 7, 7], [7, 5, 3], [5, 5, 5], [3, 3, 3]],
-        'dense_layers': [[1024, 512, 128], [1024, 512, 64], [1024, 256, 64]],
-        'strides': [[2, 2], [3, 3]],
-        'pooling': [None, 'Max']
+        'kernel_size': [7, 5, 3],
+        'dense_layers': [[1024, 512, 64], [1024, 256, 64]],
+        'batch_size': [32, 128]
+    },
+    'Vrf': {
+        'cropping': [[0, 0], [6, 6], [12, 12]],
+        'filters': [[8, 16, 32]],
+        'kernel_size': [13, 7, 3],
+        'dense_layers': [[1024, 512, 64], [1024, 256, 64]],
+        'batch_size': [32, 128]
     },
 }
 

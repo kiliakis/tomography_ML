@@ -31,7 +31,9 @@ parser.add_argument('-c', '--config', type=str, default=None,
 
 # Initialize parameters
 # data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_encoder_02-12-22'
-data_dir = './tomo_data/datasets_encoder_TF_24-03-23'
+# data_dir = './tomo_data/datasets_encoder_TF_24-03-23'
+data_dir = './tomo_data/datasets_encoder_TF_08-11-23'
+
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
 
 DATA_LOAD_METHOD='FAST_TENSOR' # it can be TENSOR or DATASET or FAST_TENSOR
@@ -43,14 +45,15 @@ var_names = ['phEr', 'enEr', 'bl',
              'inten', 'Vrf', 'mu', 'VrfSPS']
 num_Turns_Case = 1
 
-N_TRIALS=1000
+N_TRIALS=100
 TIMEOUT=60*60*1.8 # 2 hours
 
 # var_name = 'VrfSPS'
 
+
 # Train specific
 train_cfg = {
-    'epochs': 50,
+    'epochs': 30,
     'strides': [2, 2],
     'cropping': [0, 0],
     'activation': 'relu',
@@ -63,21 +66,46 @@ train_cfg = {
     'lr': 1e-3,
     'dataset%': 1,
     'batchnorm': False,
+    'conv_padding': 'same',
+    'conv_batchnorm': False,
     'normalization': 'minmax',
     'img_normalize': 'off',
     'batch_size': 32,
+    'use_bias': False,
     'param_space': {
-        'VrfSPS': {
-            'use_bias': [True],
-            'conv_padding': ['same', 'valid'],
-            'cropping': ['0,0', '7,7', '14,14'],
-            'filters': ['4,8,16', '8,16,32', '16,32,64', '32,64,128', 
-                    '4,8', '8,16', '16,32', '8,32', '16,64'],
-            'kernel_size': [13, 9, 7, 5, 3],
-            'dense_layers': ['1024,512,128', '1024,512,64', '1024,256,64', '256', '512', '1024', '64', ''],
+        # 'phEr': {
+        #     'cropping': ['0,0'],
+        #     'filters': ['8,16,32', '4,8,16'],
+        #     'kernel_size': [7, 5, 3],
+        #     'dense_layers': ['1024,512,32', '1024,256,32'],
+        #     'batch_size': [32, 128],
+        # },
+        'enEr': {
+            'cropping': ['0,0', '6,6'],
+            'filters': ['8,16,32', '4,8,16'],
+            'kernel_size': [9, 7, 5],
+            'dense_layers': ['1024,512,64', '1024,256,64'],
+            'batch_size': [32, 128],
+        },
+        # 'bl': {
+        #     'cropping': ['0,0', '6,6'],
+        #     'filters': ['8,16,32', '16,32,64'],
+        #     'kernel_size': [7, 5, 3],
+        #     'dense_layers': ['1024,512,64', '1024,256,64'],
+        #     'batch_size': [32, 128],
+        # },
+        'Vrf': {
+            'cropping': ['0,0', '6,6', '12,12'],
+            'filters': ['8,16,32'],
+            'kernel_size': [13, 7, 3],
+            'dense_layers': ['1024,512,64', '1024,256,64'],
+            'batch_size': [32, 128],
         },
     }
 }
+
+# phEr : 1.5402208646264626e-06 and parameters: {'crp': '0,0', 'flt': '8,16,32', 'kr_sz': 7, 'lrs': '1024,512,32', 'bs': 32}. Best is trial 184 with value: 1.5402208646264626e-06.
+# bl: 0.0001191571427625604 and parameters: {'crp': '0,0', 'flt': '16,32,64', 'kr_sz': 5, 'lrs': '1024,512,64', 'bs': 32}. Best is trial 40 with value: 0.0001191571427625604.
 
 category_keys = {
     'use_bias': 'bias',
@@ -86,6 +114,7 @@ category_keys = {
     'filters': 'flt',
     'kernel_size': 'kr_sz',
     'dense_layers': 'lrs',
+    'batch_size': 'bs',
 }
 
 split_keys = ['cropping', 'dense_layers', 'filters', 'kernel_size']
@@ -255,7 +284,7 @@ if __name__ == '__main__':
         param_space = param_space.get(var_name, {})
 
         study = optuna.create_study(study_name=f'{var_name}_{timestamp}',
-            direction='minimize', pruner=optuna.pruners.MedianPruner())
+            direction='minimize', pruner=optuna.pruners.MedianPruner(n_warmup_steps=5))
         try:
             study.optimize(lambda trial: train_test_model(var_name, x_train, train, x_valid, valid, param_space, trial),
                     gc_after_trial=True, n_jobs=1, n_trials=N_TRIALS, timeout=TIMEOUT)

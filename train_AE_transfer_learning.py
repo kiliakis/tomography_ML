@@ -4,6 +4,7 @@ from utils import fast_tensor_load, get_model_size, plot_feature_extractor_evalu
 from utils import plot_sample, visualize_weights
 
 from models import FeatureExtractor, AutoEncoderTranspose, AutoEncoderSkipAhead, VariationalAutoEncoder
+from models import AutoEncoderEfficientNet
 
 import time
 import tensorflow as tf
@@ -35,12 +36,14 @@ data_dir = './tomo_data/datasets_encoder_TF_08-11-23'
 
 # data_dir = './tomo_data/datasets'
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
-timestamp = 'testing'
+# timestamp = 'testing'
 print('Using timestamp: ', timestamp)
 
 # load_autoencoder = 'trials/2023_11_13_10-40-21/weights/autoenc_dense_1024_16.h5'
 # load_autoencoder = 'trials/testing/weights/autoenc_dense.h5'
 load_autoencoder = ''
+
+autoencoder_class = AutoEncoderEfficientNet
 
 # Train specific
 train_cfg = {
@@ -50,36 +53,55 @@ train_cfg = {
     'batch_size': 128
 }
 
+# autoenc_cfg = {
+#     'epochs': 50,
+#     'filters': [8, 16, 32],
+#     'dense_layers': [1024, 64],
+#     'decoder_dense_layers': [1024],
+#     'cropping': [14, 14],
+#     'kernel_size': 5,
+#     'strides': [2, 2],
+#     'conv_activation': 'relu',
+#     'enc_activation': 'relu',
+#     'dec_activation': 'relu',
+#     'alpha': 0.1,
+#     'final_activation': 'linear',
+#     'conv_padding': 'same',
+#     'pooling': None,
+#     'pooling_size': [0, 0],
+#     'pooling_strides': [1, 1],
+#     'pooling_padding': 'valid',
+#     'dropout': 0.0,
+#     'loss': 'mae',
+#     'lr': 1e-4,
+#     'use_bias': False,
+#     'conv_batchnorm': False,
+#     'dense_batchnorm': False,
+# }
+
 autoenc_cfg = {
-    'epochs': 100,
-    'filters': [8, 16, 32],
-    'dense_layers': [1024, 64],
-    'decoder_dense_layers': [1024],
-    'cropping': [14, 14],
-    'kernel_size': 5,
+    'epochs': 50,
+    'cropping': [12, 12],
+    'filters': [16, 32, 64],
+    'dense_layers': [],
+    'dense_batchnorm': False,
+    'reshape_shape': [13, 13, 8],
+    'kernel_size': 3,
     'strides': [2, 2],
-    'conv_activation': 'relu',
-    'enc_activation': 'relu',
-    'dec_activation': 'relu',
-    'alpha': 0.1,
+    'activation': 'relu',
     'final_activation': 'linear',
     'conv_padding': 'same',
-    'pooling': None,
-    'pooling_size': [0, 0],
-    'pooling_strides': [1, 1],
-    'pooling_padding': 'valid',
     'dropout': 0.0,
     'loss': 'mae',
-    'lr': 1e-4,
+    'lr': 1e-3,
     'use_bias': False,
-    'conv_batchnorm': False,
-    'dense_batchnorm': False,
 }
+
 
 feature_extractor_cfg = {
     'epochs': 100,
     # 'dense_layers': [1024, 256, 64],
-    'dense_layers': [256, 1024, 256, 64],
+    'dense_layers': [256, 64, 16],
     'activation': 'relu',
     'dropout': 0.0,
     'loss': 'mae',
@@ -194,7 +216,7 @@ if __name__ == '__main__':
         print(
             f'\n---- Autonecoder loaded, size: {get_model_size(autoenc):.1f}MB elapsed: {time.time() - start_t} ----\n')
     else:
-        autoenc = AutoEncoderTranspose(
+        autoenc = autoencoder_class(
             input_shape=x_train.shape[1:], **autoenc_cfg)
         encoder = autoenc.encoder
         print(autoenc.model.summary())
