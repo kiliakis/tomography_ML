@@ -491,15 +491,12 @@ class AutoEncoderTranspose(BaseModel):
             # Add the Convolution
             x = keras.layers.Conv2D(
                 filters=f, kernel_size=kernel_size[i], strides=strides[i],
-                use_bias=use_bias, padding=conv_padding,
+                use_bias=use_bias, padding=conv_padding, activation=conv_activation,
                 name=f'CNN_{i+1}')(x)
 
             # Apply batchnormalization
             if conv_batchnorm:
                 x = tf.keras.layers.BatchNormalization()(x)
-
-            # Apply the activation function
-            x = keras.activations.get(conv_activation)(x)
 
             # Optional pooling after the convolution
             if pooling == 'Max':
@@ -1159,6 +1156,99 @@ def custom_loss(ps_true, ps_pred):
     # print(wf_pred.shape, wf_true.shape)
     loss = K.mean(K.square(wf_true - wf_pred))
     return loss
+
+
+class EncoderOld(keras.Model):
+    # Pooling can be None, or 'Average' or 'Max'
+    def __init__(self, input_shape=(128, 128, 1), dense_layers=[1024, 256, 64],
+                 filters=[8, 16, 32], cropping=[[0, 0], [0, 0]], kernel_size=3,
+                 strides=[2, 2], activation='relu',
+                 pooling=None, pooling_size=[2, 2],
+                 pooling_strides=[1, 1], pooling_padding='same',
+                 dropout=0.0, learning_rate=0.001, loss='mse',
+                 metrics=[], use_bias=True, batchnorm=False,
+                 conv_batchnorm=False, conv_padding='same',
+                 **kwargs):
+        super().__init__()
+
+        self.inputShape = input_shape
+        # the kernel_size can be a single int or a list of ints
+        if isinstance(kernel_size, int):
+            kernel_size = [kernel_size] * len(filters)
+        assert len(kernel_size) == len(filters)
+
+        # the strides can be a list of two ints, or a list of two-int lists
+        if isinstance(strides[0], int):
+            strides = [strides for _ in filters]
+        assert len(strides) == len(filters)
+
+        # set the input size
+        inputs = keras.Input(shape=input_shape, name='Input')
+        # crop the edges
+        cropped = keras.layers.Cropping2D(
+            cropping=cropping, name='Crop')(inputs)
+        x = cropped
+        # For evey Convolutional layer
+        for i, f in enumerate(filters):
+            # Add the Convolution
+            x = keras.layers.Conv2D(
+                filters=f, kernel_size=kernel_size[i], strides=strides[i],
+                use_bias=use_bias, padding=conv_padding, activation=activation,
+                name=f'CNN_{i+1}')(x)
+
+            # Apply batchnormalization
+            if conv_batchnorm:
+                x = tf.keras.layers.BatchNormalization()(x)
+
+            # Apply the activation function
+            # x = keras.activations.get(activation)(x)
+
+            # Optional pooling after the convolution
+            if pooling == 'Max':
+                x = keras.layers.MaxPooling2D(
+                    pool_size=pooling_size, strides=pooling_strides,
+                    padding=pooling_padding, name=f'MaxPooling_{i+1}')(x)
+            elif pooling == 'Average':
+                x = keras.layers.AveragePooling2D(
+                    pool_size=pooling_size, strides=pooling_strides,
+                    padding=pooling_padding, name=f'AveragePooling_{i+1}')(x)
+
+        # Flatten after the convolutions
+        x = keras.layers.Flatten(name=f'Flatten')(x)
+        # For each optional dense layer
+        for i, layer in enumerate(dense_layers):
+            # Add the layer
+            x = keras.layers.Dense(layer, activation=activation,
+                                   name=f'Dense_{i+1}')(x)
+
+            # Apply batchnormalization
+            if batchnorm:
+                x = tf.keras.layers.BatchNormalization()(x)
+
+            # Add dropout optionally
+            if dropout > 0 and dropout < 1:
+                x = keras.layers.Dropout(
+                    dropout, name=f'Dropout_{i+1}')(x)
+
+        # Add the final layers, one for each output
+        outputs = (x)
+
+        # Also initialize the optimizer and compile the model
+        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+        model = keras.Model(inputs=inputs, outputs=outputs)
+        model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+
+        self.model = model
+
+    def predict(self, waterfall):
+        latent = self.model(waterfall)
+        return latent
+
+    def load(self, weights_file):
+        self.model = keras.models.load_model(weights_file)
+
+    def save(self, weights_file):
+        self.model.save(weights_file)
 
 
 class TomoscopeOld(keras.Model):

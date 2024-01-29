@@ -11,9 +11,9 @@ from datetime import datetime
 import argparse
 import matplotlib as mpl
 
-from utils import plot_loss
+from utils import plot_loss, fast_tensor_load
 from utils import sample_files, encoder_files_to_tensors, load_encoder_data
-from models import EncoderSingle
+from models import EncoderSingle, EncoderOld
 
 mpl.use('Agg')
 
@@ -25,10 +25,11 @@ parser.add_argument('-c', '--config', type=str, default=None,
 
 # Initialize parameters
 # data_dir = '/eos/user/k/kiliakis/tomo_data/datasets_encoder_02-12-22'
-data_dir = './tomo_data/datasets_encoder_02-12-22'
+data_dir = './tomo_data/datasets_encoder_TF_24-03-23'
 timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+timestamp = 'single-encoder-test'
 
-DATA_LOAD_METHOD = 'TENSOR'  # it can be TENSOR or DATASET
+DATA_LOAD_METHOD = 'FAST_TENSOR'  # it can be TENSOR or DATASET
 # Data specific
 IMG_OUTPUT_SIZE = 128
 # BATCH_SIZE = 32  # 8
@@ -57,7 +58,8 @@ train_cfg = {
     'dataset%': 1,
     'normalization': 'minmax',
     'loss_weights': [1, 1, 1, 1, 1, 1, 1],
-    'batch_size': 32
+    'batch_size': 32,
+    'img_normalize': 'off',
 }
 
 if __name__ == '__main__':
@@ -136,6 +138,20 @@ if __name__ == '__main__':
 
             x_valid, y_valid = encoder_files_to_tensors(
                 file_names, normalization=train_cfg['normalization'])
+        elif DATA_LOAD_METHOD == 'FAST_TENSOR':
+            assert train_cfg['normalization'] == 'minmax'
+            assert train_cfg['img_normalize'] == 'off'
+
+            TRAINING_PATH = os.path.join(ML_dir, 'training-??.npz')
+            VALIDATION_PATH = os.path.join(ML_dir, 'validation-??.npz')
+
+            x_train, y_train = fast_tensor_load(
+                TRAINING_PATH, train_cfg['dataset%'])
+            print('Number of Training files: ', len(y_train))
+
+            x_valid, y_valid = fast_tensor_load(
+                VALIDATION_PATH, train_cfg['dataset%'])
+            print('Number of Validation files: ', len(y_valid))
         elif DATA_LOAD_METHOD == 'DATASET':
             # Create the datasets
             # 1. Randomly select the training data
@@ -188,7 +204,7 @@ if __name__ == '__main__':
         # Model instantiation
         input_shape = (IMG_OUTPUT_SIZE, IMG_OUTPUT_SIZE, 1)
 
-        encoder = EncoderSingle(input_shape=input_shape, **train_cfg)
+        encoder = EncoderOld(input_shape=input_shape, **train_cfg)
 
         print(encoder.model.summary())
         end_t = time.time()
@@ -206,7 +222,7 @@ if __name__ == '__main__':
                                                     monitor='val_loss', save_best_only=True)
 
         start_time = time.time()
-        if DATA_LOAD_METHOD == 'TENSOR':
+        if 'TENSOR' in DATA_LOAD_METHOD:
             history = encoder.model.fit(
                 x=x_train, y=y_train,
                 epochs=train_cfg['epochs'],
@@ -231,6 +247,7 @@ if __name__ == '__main__':
 
         train_loss_l = np.array(history.history['loss'])
         valid_loss_l = np.array(history.history['val_loss'])
+        print(valid_loss_l)
 
         plot_loss({'Training': train_loss_l, 'Validation': valid_loss_l},
                   title='Encoder Train/Validation Loss',

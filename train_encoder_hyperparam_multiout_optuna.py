@@ -34,7 +34,8 @@ parser.add_argument('-c', '--config', type=str, default=None,
 # data_dir = './tomo_data/datasets_encoder_TF_24-03-23'
 data_dir = './tomo_data/datasets_encoder_TF_08-11-23'
 
-timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+# timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+timestamp = 'VrfSPS_test'
 
 DATA_LOAD_METHOD='FAST_TENSOR' # it can be TENSOR or DATASET or FAST_TENSOR
 IMG_OUTPUT_SIZE = 128
@@ -73,19 +74,21 @@ train_cfg = {
     'batch_size': 32,
     'use_bias': False,
     'param_space': {
-        'mu': {
-            'cropping': ['0,0', '6,6', '12,12'],
-            'filters': ['8,16,32', '4,16,64', '32,16,8'],
-            'kernel_size': ['7,7,7', '7,5,3', '7,5,5'],
-            'dense_layers': ['1024,256,128', '1024,256,32', '1024,256,64'],
-            'batch_size': [32],
-        },
+    #    'mu': {
+    #        'cropping': ['0,0', '6,6', '12,12'],
+    #        'filters': ['8,16,32', '4,16,64'],
+    #        'kernel_size': ['7,7,7', '7,5,3', '7,5,5'],
+    #        'dense_layers': ['1024,256,128', '1024,256,64'],
+    #        'conv_padding': ['same', 'valid'],
+    #        'dropout': [0.0, 0.1, 0.2],
+    #    },
         'VrfSPS': {
-            'cropping': ['0,0', '6,6', '12,12'],
+            'cropping': ['0,0', '12,12'],
             'filters': ['8,16,32', '32,16,8'],
-            'kernel_size': [13, 9, 5, 3],
-            'dense_layers': ['1024,512,256', '1024,256,128', '1024,256,64'],
-            'batch_size': [32],
+            'kernel_size': ['13,9,5', '9,7,5', 5, 3],
+            'dense_layers': ['1024,256,128', '1024,256,64'],
+           'conv_padding': ['same', 'valid'],
+           'dropout': [0.0, 0.1, 0.2],
         },
 
         # 'phEr': {
@@ -130,6 +133,7 @@ category_keys = {
     'kernel_size': 'kr_sz',
     'dense_layers': 'lrs',
     'batch_size': 'bs',
+    'dropout': 'drp',
 }
 
 split_keys = ['cropping', 'dense_layers', 'filters', 'kernel_size']

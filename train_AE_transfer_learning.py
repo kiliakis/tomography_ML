@@ -35,15 +35,15 @@ var_names = ['phEr', 'enEr', 'bl',
 data_dir = './tomo_data/datasets_encoder_TF_08-11-23'
 
 # data_dir = './tomo_data/datasets'
-timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
-# timestamp = 'testing'
+# timestamp = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+timestamp = 'testing'
 print('Using timestamp: ', timestamp)
 
 # load_autoencoder = 'trials/2023_11_13_10-40-21/weights/autoenc_dense_1024_16.h5'
-# load_autoencoder = 'trials/testing/weights/autoenc_dense.h5'
-load_autoencoder = ''
+load_autoencoder = 'trials/testing/weights/autoenc_dense.h5'
+# load_autoencoder = ''
 
-autoencoder_class = AutoEncoderEfficientNet
+autoencoder_class = AutoEncoderTranspose
 
 # Train specific
 train_cfg = {
@@ -53,61 +53,75 @@ train_cfg = {
     'batch_size': 128
 }
 
-# autoenc_cfg = {
-#     'epochs': 50,
-#     'filters': [8, 16, 32],
-#     'dense_layers': [1024, 64],
-#     'decoder_dense_layers': [1024],
-#     'cropping': [14, 14],
-#     'kernel_size': 5,
-#     'strides': [2, 2],
-#     'conv_activation': 'relu',
-#     'enc_activation': 'relu',
-#     'dec_activation': 'relu',
-#     'alpha': 0.1,
-#     'final_activation': 'linear',
-#     'conv_padding': 'same',
-#     'pooling': None,
-#     'pooling_size': [0, 0],
-#     'pooling_strides': [1, 1],
-#     'pooling_padding': 'valid',
-#     'dropout': 0.0,
-#     'loss': 'mae',
-#     'lr': 1e-4,
-#     'use_bias': False,
-#     'conv_batchnorm': False,
-#     'dense_batchnorm': False,
-# }
-
 autoenc_cfg = {
     'epochs': 50,
-    'cropping': [12, 12],
-    'filters': [16, 32, 64],
-    'dense_layers': [],
-    'dense_batchnorm': False,
-    'reshape_shape': [13, 13, 8],
-    'kernel_size': 3,
+    'filters': [8, 16, 32],
+    'dense_layers': [1024, 256],
+    'decoder_dense_layers': [1024],
+    'cropping': [14, 14],
+    'kernel_size': 5,
     'strides': [2, 2],
-    'activation': 'relu',
+    'conv_activation': 'relu',
+    'enc_activation': 'relu',
+    'dec_activation': 'relu',
+    'alpha': 0.1,
     'final_activation': 'linear',
     'conv_padding': 'same',
+    'pooling': None,
+    'pooling_size': [0, 0],
+    'pooling_strides': [1, 1],
+    'pooling_padding': 'valid',
     'dropout': 0.0,
     'loss': 'mae',
     'lr': 1e-3,
     'use_bias': False,
+    'conv_batchnorm': False,
+    'dense_batchnorm': False,
 }
+
+# autoenc_cfg = {
+#     'epochs': 50,
+#     'cropping': [12, 12],
+#     'filters': [16, 32, 64],
+#     'dense_layers': [],
+#     'dense_batchnorm': False,
+#     'reshape_shape': [13, 13, 8],
+#     'kernel_size': 3,
+#     'strides': [2, 2],
+#     'activation': 'relu',
+#     'final_activation': 'linear',
+#     'conv_padding': 'same',
+#     'dropout': 0.0,
+#     'loss': 'mae',
+#     'lr': 1e-3,
+#     'use_bias': False,
+# }
 
 
 feature_extractor_cfg = {
     'epochs': 100,
-    # 'dense_layers': [1024, 256, 64],
-    'dense_layers': [256, 64, 16],
+    'dense_layers': [1024, 256, 64, 16],
     'activation': 'relu',
     'dropout': 0.0,
     'loss': 'mae',
-    'lr': 1e-4,
+    'lr': 1e-3,
     'use_bias': True,
     'batchnorm': False,
+    'model_cfg': {
+        'phEr': {},
+        'erEr': {},
+        'bl': {},
+        'inten': {},
+        'Vrf': {},
+        'mu': {
+            'dense_layers': [1024, 256, 64, 16],
+            'use_bias': True,
+        },
+        'VrfSPS': {
+            'dense_layers': [1024, 256, 64, 16],
+            'use_bias': True,
+        }
+    }
 }
 
 
@@ -276,9 +290,10 @@ if __name__ == '__main__':
         visualize_weights(timestamp, f'autoenc_dense.h5')
     
     # Encode the train samples to get the latent space
-    x_latent_train = tf.concat([encoder.predict(x_train), tf.expand_dims(y_train[:, 3], axis=1)], axis=1)
-    x_latent_valid = tf.concat([encoder.predict(x_valid), tf.expand_dims(y_valid[:, 3], axis=1)], axis=1)
-    
+    # x_latent_train = tf.concat([encoder.predict(x_train), tf.expand_dims(y_train[:, 3], axis=1)], axis=1)
+    # x_latent_valid = tf.concat([encoder.predict(x_valid), tf.expand_dims(y_valid[:, 3], axis=1)], axis=1)
+    x_latent_train = encoder.predict(x_train)
+    x_latent_valid = encoder.predict(x_valid)
     # print the shape of the latent space
     print(f'Latent space shape: {x_latent_train.shape}')
 
@@ -302,11 +317,12 @@ if __name__ == '__main__':
         # cfg = train_cfg.copy()
         # cfg.update(model_cfg.get(var_name, {}))
         model_cfg[var_name] = feature_extractor_cfg.copy()
+        model_cfg[var_name].update(feature_extractor_cfg['model_cfg'].get(var_name, {}))
         model = FeatureExtractor(input_shape=x_latent_train.shape[1:],
                                 output_features=1,
                                 output_name=var_name, **model_cfg[var_name])
 
-        # print(model.model.summary())
+        print(model.model.summary())
 
         if 'TENSOR' in DATA_LOAD_METHOD:
             models[var_name] = {'model': model.model,
