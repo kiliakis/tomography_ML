@@ -17,9 +17,7 @@ __pycache__/
 weights/
 trials/
 archive/
-tomo_data
 tomo_data/
-simulations/
 logs/
 plots/
 hparam_dicts/
