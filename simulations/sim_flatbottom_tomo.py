@@ -311,7 +311,7 @@ plt.show()
 #              -350e6, 350e6, xunit='rad', separatrix_plot=True, histograms_plot=True,
 #              Profile=profile, format_options=format_options)
 # plots.track()
-exit()
+# exit()
 
 # put the beam in the center of the LHC bucket
 sps_phis = np.mean(SPS_beam.dt)

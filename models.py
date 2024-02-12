@@ -951,8 +951,9 @@ class EncoderMulti:
             if fname in weights_dir_files:
                 model.load(os.path.join(weights_dir, fname))
             else:
-                raise FileNotFoundError(
-                    f'File {fname} not found in {weights_dir}')
+                pass
+                # raise FileNotFoundError(
+                #     f'File {fname} not found in {weights_dir}')
 
     def save(self, model_path):
         # Save all individual models
